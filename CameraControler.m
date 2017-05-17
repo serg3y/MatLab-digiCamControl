@@ -1,7 +1,7 @@
 %Controller for tethered DSLR cameras using <a href=http://digicamcontrol.com/>digiCamControl</a> (Windows app) 
 % C = CameraController     -create class (auto detects digiCamControl)
 % C = CameraController(ip)  -address of pc running digiCamControl Webserver
-% C = CameraController(fold) -folder with digiCamControl CMD Utility
+% C = CameraController(ip,fold) -folder with digiCamControl CMD Utility
 %
 %Description:
 %-This class can command supported DSLR cameras to capture photos or video,
