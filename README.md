@@ -2,12 +2,12 @@
 % C = CameraController     -create class (auto detects digiCamControl)
 % C = CameraController(ip)  -address of pc running digiCamControl Webserver
 % C = CameraController(ip,fold) -folder with digiCamControl CMD Utility
-%
+% 
 %Description:
 %-This class can control supported DSLR cameras to capture photos or video,
 % configure file download and change camera settings such as ISO, exposure,
 % focus, aperture(fnumber), flash, white balance, compression, etc.
-%
+% 
 %Setup:
 %1.Install and run digiCamControl, BETA v2.0.69 or greater, from:
 %  https://sourceforge.net/projects/digicamcontrol/files/latest/download
@@ -22,7 +22,7 @@
 %  other networked computers running MatLab, even LINUX - not tested!)
 %4.Read the help and try an example. For digiCamControl <a href=http://digicamcontrol.com/doc>documentation</a>,
 %  <a href=http://digicamcontrol.com/phpbb/>forums</a> or to make a <a href=http://digicamcontrol.com/donate>donation</a> visit http://digiCamControl.com
-%
+% 
 %Remarks:
 %-When this class is deffined it will try to retrieve camera settings from
 % the digiCamControl app using either HTTP (faster) or CMD interface.
@@ -31,7 +31,7 @@
 %-It may be possible to run under Linux without a dedicated Windows machine
 % by running digiCamControl inside a Windows vertial machine, NOT TESTED!
 %-This class can NOT stream video or live preview to MatLab.
-%
+% 
 %Camera Settings:
 %-Some settings will not work if camera is not set to Manual (M).
 %-To change focus ensure lens is set to Manual Focus (MF) and use
@@ -43,7 +43,7 @@
 %-Lens motors are usually servos (not stepper motors) so a specific focal
 % distance is hard to reproduce programmatically. To 'reset' go to the
 % physical limit, in either direction, and count steps from that point.
-%
+% 
 %Image Capture:
 %-When Webserver is NOT enabled capture latency is 0.3-0.6 sec (depending
 % on hardware) and variance is about ±0.03 sec.
@@ -57,7 +57,7 @@
 % user Cmd('StartRecord') and Cmd('StopRecord').
 %-The Capture method blocks code (default) except if acquisition + download
 % take more then ~3 sec, then digiCamControl returns without error.
-%
+% 
 %Image download:
 %-download is affected by several settings including:
 % C.session.folder                  = 'C:\DSLR';
@@ -80,7 +80,7 @@
 %-Some useful [tags] are: [Date yyyy-MM-dd-hh-mm-ss],[Camera Name],
 % [Exif.Photo.ExposureTime],[Exif.Photo.FNumber],[Exif.Photo.ISOSpeedRatings]
 %-[tags] can be used as
-%
+% 
 %digiCamControl Issues:
 %-digiCamControl’s "Sync camera time" has known problems (2017 Apr).
 %-If set to video mode the focus step size may become smaller and it may
@@ -90,11 +90,11 @@
 %-For all issues see: http://digicamcontrol.com/phpbb/viewforum.php?f=4
 %-Set property.nodownload is not working
 %-Get camera.ae_bracketing fails, but List and Set work.
-%
+% 
 %MatLab Issues:
 %-When setting a camera property a List method is called twice, first to
 % check the property exists and again to find which property was set.
-%
+% 
 %Example: change settings
 % C = CameraController;
 % C.camera.isonumber = 100;
@@ -110,26 +110,26 @@
 % C.session.allowoverwrite = true;
 % C.session.counter = 1;
 % C.session.lowercaseextension = 0;
-%
+% 
 %Example: immediate capture
 % C = CameraController;  %initialise
 % C.Capture('FileName')  %capture and download image as "FileName.jpg"
 % file = C.lastfile      %get last downloaded filenames
-%
+% 
 %Example: timed capture
 % C = CameraController;
 % time = ceil(now*24*60*60+1.5)/24/60/60; %upcoming whole second
 % file = [datestr(time,'yyyy-mm-dd_HHMMSS.FFF') '_' C.property.devicename]; %timestamp & camera name
 % C.Capture(file,time); %capture
 % datestr(time)
-%
+% 
 %Example: two cameras
 % C = CameraController;
 % C.session.filenametemplate = 'MyTest_[Camera Name]'; %set filename pattern
 % C.Cameras(1), C.property.devicename = 'Cam1'; %set camera name (optional)
 % C.Cameras(2), C.property.devicename = 'Cam2';
 % C.Cmd('CaptureAll')
-%
+% 
 %Example: focus stacking
 % C = CameraController;
 % C.Cmd('LiveViewWnd_Show'), pause(1) %turn on live preview
