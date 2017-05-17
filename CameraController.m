@@ -150,7 +150,10 @@
 %-Allow commas in filenames
 %-Minor changes and better help
  
-%Example Webserver commands, use urlread(url)
+%ReadMe:
+% fprintf(fopen('ReadMe.txt','w'),'%s',help('CameraController'));fclose all
+
+%Example HTTP webserver commands, use urlread(url)
 % http://localhost:5513/?SLC=CaptureNoAf&param1=Test\[Time%20hh-mm-ss]      %capture and set filename
 % http://localhost:5513/?CMD=Capture                                        %capture and display controls webpage with currently selected (previous) photo
 % http://localhost:5513/?CMD=CaptureAll                                     %capture with all connected cameras
@@ -170,7 +173,7 @@
 % http://localhost:5513/?SLC=Set&param1=session.folder&param2=c:\pictures
 % http://localhost:5513/?SLC=Set&param1=session.filenametemplate&param2=capture1
 
-%Can olso use CameraControlCmd.exe when digiCamControl is off (SLOW!)
+%Can use CameraControlCmd.exe when digiCamControl is off! VERY SLOW!
 % http://digicamcontrol.com/doc/userguide/cmd
 %Examples:
 % system('"C:\Program Files (x86)\digiCamControl\CameraControlCmd.exe" /filename E:\test\test.jpg /capture')
@@ -202,19 +205,6 @@
 % /comment comment           - set in camera comment string 
 % /copyright copyright       - set in camera copyright string 
 % /artist artist             - set in camera artist string 
-
-%Things to fix with digiCamControl
-%-http list camera(.) returns trailing line feed and no error if no camera
-%-http errors do not begin with error
-%-http&cmd List returns tittle case "True"
-%-http List/Get uses no quotes to distingues boolean True from string "True"
-%-cmd List uses no quotes to distingues boolean True from string "True" (Get is ok)
-%-cmd errors start with different strings: Error, ...?
-%-cmd prohibits use of ";" but it can be used via http and gui
-%-cmd Capture argument does not allow spaces
-%-CaptureAll uses focus, does autofocus, need CaptureAllNoAf
-%-http&cmd "Do" commands are case sesitive
-%-http&cmd errors could list valid properties
 
 classdef CameraController < handle
     %% Properties
