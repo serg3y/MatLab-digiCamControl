@@ -82,12 +82,12 @@
 %-[tags] can be used as
 %
 %digiCamControl Issues:
-%-digiCamControl’s "Sync camera time" has known problems (2017 Apr).
+%-digiCamControl's "Sync camera time" has known problems (2017 Apr).
 %-If set to video mode the focus step size may become smaller and it may
 % take ~600 steps, about 2 minutes, to move focus end-to-end on a Canon.
 %-camera.exposurestatus was removed because it wasn't working (Canon 70D).
 %-When digiCamControl 2.0.72 starts focusmode is set to blank (Canon 70D)
-%-For all issues see: http://digicamcontrol.com/phpbb/viewforum.php?f=4
+%-Other known issues: http://digicamcontrol.com/phpbb/viewforum.php?f=4
 %-Set property.nodownload is not working
 %-Get camera.ae_bracketing fails, but List and Set work.
 %
