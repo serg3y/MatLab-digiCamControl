@@ -4,7 +4,7 @@
 % C = CameraController(ip,fold) -folder with digiCamControl CMD Utility
 %
 %Description:
-%-This class can command supported DSLR cameras to capture photos or video,
+%-This class can control supported DSLR cameras to capture photos or video,
 % configure file download and change camera settings such as ISO, exposure,
 % focus, aperture(fnumber), flash, white balance, compression, etc.
 %
