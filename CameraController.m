@@ -145,7 +145,7 @@
  
 %Changes:
 %v1.2.2 (2017-05-05)
-%-Support for remote http server
+%-Support a remote http server
 %-Better error handling
 %-Allow commas in filenames
 %-Minor changes and better help
@@ -206,6 +206,14 @@
 % /copyright copyright       - set in camera copyright string 
 % /artist artist             - set in camera artist string 
 
+%Can use dll files diectly using NET.addAssembly, did not work for me...
+% https://github.com/JonHoy/Matlab_DSLR_Camera_Control/
+%>> camera.CapturePhoto();
+% Error using CameraControl_MATLAB (line 20)
+% Message: The method or operation is not implemented.
+% Source: CameraControl.Devices
+% HelpLink: 
+
 classdef CameraController < handle
     %% Properties
     properties (Dependent = true) %accessed by other methods
@@ -259,8 +267,6 @@ classdef CameraController < handle
                 [status,err] = C.TestHTTP(C.webserver);
                 if status
                     C.connection = 'http';
-                else
-                    err = sprintf('http error: %s',err);
                 end
             end
             if ~status && ~isempty(C.dccfolder)
@@ -268,12 +274,12 @@ classdef CameraController < handle
                 if status
                     C.connection = 'cmd';
                 else
-                    err = sprintf('cmd error: %s',err);
                     C.connection = ''; %no connection
                 end
             end
             C.Error(err,nargout<2)
         end
+        
         function [name,err] = CheckCamera(C)
             %Detect camera name (if any) and update its allowed setting
             [name,err] = C.Get('property.devicename'); %check if a camera is connected
@@ -395,7 +401,7 @@ classdef CameraController < handle
             % cmds = Cmd         -list of single-line-commands (cellstr)
             % [cmd,err] = Cmd(cmd) -run command and return errors (string) 
             status = 0; %init
-            [I,mch] = C.Compare(cmd,C.cmds);
+            [I,mch] = C.Compare(C.cmds,cmd);
             if sum(I) == 1
                 [~,err] = C.Run('Do',mch); %Do commands do not return anything
                 if isempty(err)
@@ -405,6 +411,48 @@ classdef CameraController < handle
                 err = sprintf('Invalid command: options are:%s',sprintf('\n''%s''',C.cmds{:}));
             end
             C.Error(err,nargout<2)
+        end
+        
+        function [status,err] = Focus(C,Num,Mode,Wait)
+            %Adjust camera focus, or auto-focus
+            % Focus([])    -auto focus, lens must be set to AF
+            % Focus(Num)      -number of steps, +ve=far-field, -ve=near
+            % Focus(Num,Mode)    -type of step {'small'} 'med' 'large'
+            % Focus(Num,Mode,Wait)  -time delay per step (sec)
+            %Starts live view, lens can be in MF|AF, camera can be in M|A..
+            %Step size can be set in: File>Settings>Live view
+            C.Cmd('LiveViewWnd_Show') %can skip if LiveView is on
+            if nargin<2 || isempty(Num)
+                [status,err] = C.Cmd('LiveView_Focus'); %auto focus, user must wait for focus to finish manually
+            elseif Num ~= floor(Num);
+                err = 'Focus step must be an integer';
+            elseif Num==0
+                %do nothing
+            else
+                if nargin<3 || isempty(Mode) %default step mode
+                    Mode = 'small';
+                end
+                if nargin<4 || isempty(Wait) %default delay
+                    switch lower(Mode(1))
+                        case 's', Wait = 0.4; %adjust these
+                        case 'm', Wait = 2;
+                        case 'l', Wait = 10;
+                    end
+                end
+                if Num > 0, cmd = 'P'; %towards far focus
+                else        cmd = 'M'; %towards near focus
+                end
+                switch lower(Mode(1))
+                    case {1 's'}, %do nothing
+                    case {2 'm'}, cmd = [cmd cmd];
+                    case {3 'l'}, cmd = [cmd cmd cmd];
+                end
+                for k = 1:abs(Num)
+                    [status,err] = C.Cmd(['LiveView_Focus_' cmd]); %send command
+                    pause(Wait)
+                end
+            end
+            C.Error(err,nargin<2)
         end
         
         function Clock(~,run_in_this_session)
