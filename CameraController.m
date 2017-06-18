@@ -5,8 +5,15 @@
 %
 %Description:
 %-This class can control supported DSLR cameras to capture photos or video,
-% configure file download and change camera settings such as ISO, exposure,
+% download last capture and change camera settings such as ISO, exposure,
 % focus, aperture(fnumber), flash, white balance, compression, etc.
+%
+%Limitations:
+%-Cannot download previous photos from the camera with MatLab, user has to
+% use digiCamControl>Download menu to browse and download photos.
+%-Cannot stream video to MatLab. digiCamControl does supports "Open
+% Broadcaster Software" (OBS) and "XSplit", but I don't know if they can
+% stream to MatLab. Please see <a href=http://digicamcontrol.com/doc/usecases/live>Streaming</a> and <a href=http://digicamcontrol.com/phpbb/search.php?keywords=%5BOBS+%7C+XSplit+%7C+streaming%5D&terms=any&author=&sc=1&sf=all&sr=posts&sk=t&sd=d&st=0&ch=300&t=0&submit=Search>Search Forums</a> for more info.
 %
 %Setup:
 %1.Install and run digiCamControl, BETA v2.0.69 or greater, from:
@@ -656,7 +663,7 @@ classdef CameraController < handle
             else
                 s = regexp(s,'camera\.(.*?)=(.*)','tokens','once'); %split fields and values, eg {{'fnumber' '4.0'};...}
                 s = cat(1,s{:})'; %form a cellstr table 2-by-n
-                s(1,:) = regexprep(s(1,:),{'\.','-'},''); %remove ".","-" from field names
+                s(1,:) = regexprep(s(1,:),'[^\w]',''); %remove "." "-" from field names (Nikon), set methods will not work for affected fields
                 s = struct(s{:}); %make a struct
                 if isfield(s,'exposurestatus')
                     s = rmfield(s,'exposurestatus'); %"exposurestatus" is read only and does not appear to change with a Canon
