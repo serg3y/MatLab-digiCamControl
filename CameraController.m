@@ -7,28 +7,28 @@
 %-This class can control supported DSLR cameras to capture photos or video,
 % download last capture and change camera settings such as ISO, exposure,
 % focus, aperture(fnumber), flash, white balance, compression, etc.
+%-digiCamControl is a multi purpose, free, open source, Windows only
+% application that can control a host of <a href=http://digicamcontrol.com/cameras>supported cameras</a>. 
+%-This class communicates with camera(s) via digiCamControl's provided 
+% <a href=http://digicamcontrol.com/doc/userguide/web>HTTP Webserver</a> or <a href=http://digicamcontrol.com/doc/userguide/remoteutil>CMD Utility</a>. 
+%-The Webserver is much faster and allows camera(s) to be controlled from
+% any networked computer with MatLab, even LINUX (untested).
 %
 %Limitations:
 %-Cannot download previous photos from the camera with MatLab, user has to
 % use digiCamControl>Download menu to browse and download photos.
-%-Cannot stream video to MatLab. digiCamControl does supports "Open
+%-Cannot stream video, only liveview. digiCamControl does supports "Open
 % Broadcaster Software" (OBS) and "XSplit", but I don't know if they can
 % stream to MatLab. Please see <a href=http://digicamcontrol.com/doc/usecases/live>Streaming</a> and <a href=http://digicamcontrol.com/phpbb/search.php?keywords=%5BOBS+%7C+XSplit+%7C+streaming%5D&terms=any&author=&sc=1&sf=all&sr=posts&sk=t&sd=d&st=0&ch=300&t=0&submit=Search>Search Forums</a> for more info.
 %
 %Setup:
 %1.Install and run digiCamControl, BETA v2.0.69 or greater, from:
 %  https://sourceforge.net/projects/digicamcontrol/files/latest/download
-%  (digiCamControl is a multi purpose, free, open source, Windows only
-%  application that can control a host of <a href=http://digicamcontrol.com/cameras>supported cameras</a>)
 %2.Connect one or more camera by USB or WiFi to the PC and ensure
 %  digiCamControl detects the camera(s). 
-%  (This class communicates with camera(s) via digiCamControl, using the
-%  inbuilt <a href=http://digicamcontrol.com/doc/userguide/web>HTTP Webserver</a>, when enabled, or <a href=http://digicamcontrol.com/doc/userguide/remoteutil>CMD Utility</a>.) 
-%3.To enable Webserver go to File>Settings>Webserver (RESTART REQUIRED).
-%  (Webserver is MUCH faster and allows camera(s) to be controlled from
-%  other networked computers running MatLab, even LINUX - not tested!)
-%4.Read the help and try an example. For digiCamControl <a href=http://digicamcontrol.com/doc>documentation</a>,
-%  <a href=http://digicamcontrol.com/phpbb/>forums</a> or to make a <a href=http://digicamcontrol.com/donate>donation</a> visit http://digiCamControl.com
+%3.To enable Webserver go to: File>Settings>Webserver>Enable [+RESTART APP]
+%4.Read the help and try an example. Visit http://digiCamControl.com for 
+%  <a href=http://digicamcontrol.com/doc>documentation</a>, <a href=http://digicamcontrol.com/phpbb/>forums</a> and to make a <a href=http://digicamcontrol.com/donate>donation</a>.
 %
 %Remarks:
 %-When this class is deffined it will try to retrieve camera settings from
@@ -148,6 +148,16 @@
 % end
 % C.Cmd('LiveViewWnd_Hide') %turn off live preview to save battery
 %
+%Example: stream live view (~15Hz)
+% C = CameraController;
+% C.Cmd('LiveViewWnd_Show') %start live view
+% % C.Cmd('All_Minimize') %minimise digiCamControl app
+% clf(figure(1)); ah=gca; %create figure
+% while ishandle(ah) %loop until figure is closed
+%     imagesc(imread('http://localhost:5513/liveview.jpg'),'par',ah), drawnow %display frame
+% end
+% C.Cmd('LiveViewWnd_Hide') %stop live view
+%
 %Serge 2017 Apr, email bugs/questions/corrections to: <a href="http://mailto:s3rg3y@hotmail.com">s3rg3y@hotmail.com</a>
  
 %Changes:
@@ -160,7 +170,11 @@
 %ReadMe:
 % fprintf(fopen('ReadMe.txt','w'),'%s',help('CameraController'));fclose all
 
+%Latest beta:
+% https://s3.amazonaws.com/download.digicamcontrol.com/digiCamControlsetup_2.0.72.10.exe (2017-06-19) 
+
 %Example HTTP webserver commands, use urlread(url)
+% http://localhost:5513                                                     %primitive http GUI 
 % http://localhost:5513/?SLC=CaptureNoAf&param1=Test\[Time%20hh-mm-ss]      %capture and set filename
 % http://localhost:5513/?CMD=Capture                                        %capture and display controls webpage with currently selected (previous) photo
 % http://localhost:5513/?CMD=CaptureAll                                     %capture with all connected cameras
