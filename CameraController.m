@@ -9,7 +9,7 @@
 %2.Enable webserver: File>Settings>Webserver>Enable **RESTART REQUIRED**.
 %3.Connect one or more cameras using USB cable (or WiFi if supported).
 %4.For full manual control set camera mode to (M) and lens to (MF).
-%5.Test the camera through digiCamControl GUI.
+%5.Test the connection through digiCamControl GUI.
 %6.Try the examples and read this help.
 %
 %Remarks:
@@ -37,21 +37,16 @@
 %-digiCamControl issues: http://digicamcontrol.com/phpbb/viewforum.php?f=4
 %
 %Camera Settings:
-%-Some settings will not have affect if camera is not set to Manual (M).
-%-To control focus ensure lens is set to Manual Focus (MF) and use
-% Cmd('LiveView_Focus_**') where ** is one of the following: 
-%  near focus: M (small step), MM (medium step), MMM (large step)
-%  far focus:  P (small step), PP (medium step), PPP (large step)
+%-Some settings will not have affect if camera is not in Manual mode (M).
+%-To control focus ensure lens is set to Manual Focus (MF):
 %-Focus step size & speed can be modified in: <a href=http://digicamcontrol.com/doc/userguide/settings#live-view>File>Settings>Live view</a>
-%-Lenses use servo motors which have no discrete physical 'steps'. To
+%-Note: Lenses use servo motors which have no discrete physical 'steps'. To
 % achieve a specific focus reproducibly try to go to the lens's physical
 % limit, in either direction, and apply a set change from there.
 %
 %Image Capture:
-%-When webserver is enabled File>Settings>Webserver *RESTART REQUIRED*
-% commands are passed via http with a short latencies of ~0.05 sec.
-%-If webserver is NOT enabled capture latency is much larger, 0.3-0.6 sec
-% (depending on hardware) and variance is about ±0.03 sec.
+%-To reduce capute latency from 0.3-0.6 sec to ~0.05s enable HTTP
+% webserver, File>Settings>Webserver *RESTART REQUIRED*
 %-To measure the delay and variance try imaging the computer's own clock by
 % running the "Clock" method provided with this class.
 %-Cmd('CaptureAll') will trigger all connected cameras but there will be a
@@ -103,16 +98,16 @@
 % C.camera.compressionsetting = 'Large Fine JPEG';
 % C.camera.drive_mode         = 'Single-Frame Shooting';
 %
-%Ex: instant capture
-% C = CameraController;
-% C.Capture                %capture (download using filename defined by "session.filenametemplate") 
-% C.Capture('FileName')    %capture and "session.filenametemplate" as "FileName.jpg"
-% C.Capture('[Unix Time]') %capture and download image as "FileName.jpg"
-% file = C.lastfile        %get last downloaded filenames
+%Ex: simple capture
+% C = CameraController;        %initialise
+% C.Capture                    %capture (filename set by "session.filenametemplate") 
+% C.Capture('MyPhoto')         %capture (set custom filename)
+% C.Capture('[Time hh-mm-ss]') %capture (use time tag as filename)
+% file = C.lastfile            %get last downloaded filenames
 %
-%Ex: delayed capture
+%Ex: timed capture
 % C = CameraController;
-% time = ceil(now*24*60*60+3)/24/60/60; %upcoming whole second
+% time = ceil(now*24*60*6)/24/60/60; %upcoming whole second
 % file = [datestr(time,'yyyy-mm-dd_HHMMSS.FFF') '_' C.property.devicename]; %timestamp & camera name
 % C.Capture(file,time); %capture
 % datestr(time)
@@ -136,19 +131,19 @@
 % C.Cmd('LiveViewWnd_Hide')      %turn off live preview to save battery
 %
 %Ex: stream live view
-%To reduce lag enable: Live View>Display>No processing
 %To remove rectangle:  Live View>Display>Show focus rectangle
+%To reduce lag enable: Live View>Display>No processing
 % C = CameraController;
-% C.Cmd('LiveViewWnd_Show');     %start live view
-% C.Cmd('All_Minimize');         %minimise digiCamControl
-% clf(figure(1))                 %prep figure
-% h = imagesc(C.LiveView);       %display first frame
-% hold on, axis equal tight      %prepare
-% while ishandle(h)              %loop until closed
-%     set(h,'cdata',C.LiveView)  %update frame data
-%     drawnow
+% C.Cmd('LiveViewWnd_Show');                    %start live view
+% C.Cmd('All_Minimize');                        %minimise digiCamControl
+% pause(3)                                      %wait for live view
+% clf, h = imshow(C.LiveView);                  %prepare figure
+% uicontrol('str','Capture','call','C.Capture') %capture button
+% while ishandle(h)                             %loop untill closed
+%     set(h,'cdata',C.LiveView)                 %update live view
+%     drawnow                                   %update display
 % end
-% C.Cmd('LiveViewWnd_Hide');     %stop live view (to conserver battery)
+% C.Cmd('LiveViewWnd_Hide');                    %stop live view
 % 
 %Ex: debuging
 % C = CameraController;
@@ -263,13 +258,11 @@ classdef CameraController < handle
         function C = CameraController(dcc,dbg)
             if nargin<1 || isempty(dcc), C.dcc = ''; else C.dcc = dcc; end
             if nargin<2 || isempty(dbg), C.dbg = 1;  else C.dbg = dbg; end
-            if C.CheckConnection(C.dcc) %print error msgs
+            if C.CheckConnection(C.dcc) %prints error msgs, if any
                 disp(['connection type: ' C.connection])
                 disp(['digiCamControl:  ' C.dcc])
-                [name,serials,err] = C.CheckCamera;
-                if isempty(name)
-                    C.Error(err)
-                else
+                [name,serials] = C.CheckCamera;
+                if ~isempty(name)
                     t = sprintf('%s, ',serials{:});
                     disp(['camera serials:  ' t(1:end-2)])
                     disp(['current camera:  ' name])
@@ -302,6 +295,7 @@ classdef CameraController < handle
                         [status,err3] = C.TestCMD(C.dcc);
                         if status
                             C.connection = 'CMD'; %success (slow connection)
+                            C.Error('Turn on HTTP webserver to reduce latency and to stream LiveView')
                         else
                             err = [err1 ' + ' err3];
                         end
@@ -333,12 +327,12 @@ classdef CameraController < handle
             %Detect camera name (if any) and update its allowed setting
             name = ''; %init
             [serials,err] = C.Cameras;
-            if ~isempty(serials) && isempty(err) %check if a camera is connected
+            if ~isempty(serials) %is a camera connected
                 [name,err] = C.Get('property.devicename');
                 C.options = C.Options; %cache camera options
                 C.cmds = C.List('Cmds'); %cache commands
             end
-            C.Error(err,nargout<2)
+            C.Error(err,nargout<3)
         end
         
         function [out,err] = Capture(C,file,time,mode,lag,wait)
@@ -389,16 +383,44 @@ classdef CameraController < handle
         end
         
         function [I,err] = LiveView(C)
-            err = '';
+            err = ''; I = []; %init
             if strcmp(C.connection,'HTTP')
                 try
-                    I = imread(['http://' C.dcc ':5513/liveview.jpg']);
+                    I = imread(['http://' C.dcc ':5513/liveview.jpg'],'jpg');
                 catch e
-                    I = [];
-                    err = e.message;
+                    if strcmp(e.identifier,'MATLAB:imagesci:imread:readURL')
+                        err = 'HTTP connection timed out';
+                    elseif strcmp(e.identifier,'MATLAB:imagesci:jpeg_depth:unhandledLibraryError')
+                        err = 'Live view not active';
+                        %alternative is to turn on live view now and wait
+                        %upto ~4 sec for image, however when live view is
+                        %turned off the old live view image is cached and
+                        %there is no way to tell that live view is actualy
+                        %off. So onus is on user to ensure live view is
+                        %turned on and is running.
+                        % warning('off','MATLAB:imagesci:jpeg_depth:libraryMessage') %supress repeated warnings
+                        % C.Cmd('LiveViewWnd_Show'); %start live view
+                        % C.Cmd('All_Minimize');     %minimise live view window
+                        % for k = 1:40
+                        %     pause(0.1)
+                        %     try
+                        %         I = imread(['http://' C.dcc ':5513/liveview.jpg'],'jpg');
+                        %     end
+                        %     if ~isempty(I)
+                        %         break
+                        %     end
+                        % end
+                        % if isempty(I)
+                        %     err = 'Live view not active';
+                        % end
+                    else
+                        err = e.message;
+                    end
                 end
+            elseif strcmp(C.connection,'CMD')
+                err = 'LiveView only works with HTTP webserver';
             else
-                err = 'LiveView only works when using http webserver';
+                err = 'Check connection';
             end
             C.Error(err,nargout<2)
         end
@@ -411,7 +433,7 @@ classdef CameraController < handle
             % [SN,err] = Cameras(.)  -return error string
             %Use property.serialnumber to get current camera's serial
             [serials,err] = C.List('cameras'); %all cameras serial numbers
-            if isempty(serials)
+            if isempty(serials) || strcmpi(serials,'OK')
                 err = 'No camera detected';
                 out = '';
             elseif nargin>1 %select a specific camera
@@ -500,13 +522,13 @@ classdef CameraController < handle
                 end
                 if nargin<4 || isempty(Wait) %default delay
                     switch lower(Mode(1))
-                        case 's', Wait = 0.4; %adjust these
-                        case 'm', Wait = 2;
-                        case 'l', Wait = 10;
+                        case {1 's'}, Wait = 0.4; %adjust these
+                        case {2 'm'}, Wait = 2;
+                        case {3 'l'}, Wait = 10;
                     end
                 end
-                if Num > 0, cmd = 'P'; %towards far focus
-                else        cmd = 'M'; %towards near focus
+                if Num > 0, cmd = 'P'; %move towards far focus
+                else        cmd = 'M'; %move towards near focus
                 end
                 switch lower(Mode(1))
                     case {1 's'}, %do nothing
