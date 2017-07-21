@@ -24,16 +24,19 @@
 % any Windows/Linux computer on the network or via the <a href=http://digicamcontrol.com/doc/userguide/settings#webserver>internet</a>. 
 %-Visit http://digiCamControl.com for <a href=http://digicamcontrol.com/doc>documentation</a>, <a href=http://digicamcontrol.com/phpbb/>forums</a> and to <a href=http://digicamcontrol.com/donate>donate</a>.
 %-Method in this class are Capitalised and have additional descriptions.
-%-When this class is created it does a one of retriaval of allowed camera
+%-When this class is created it does a one of retrieval of allowed camera
 % options. Redefine this class when swapping cameras.
 %
 %Limitations:
 %-This class cannot download old photos, user has to use digiCamControl app
-% manualy: <a href=http://digicamcontrol.com/doc/userguide/interface/downph>digiCamControl>Download photos</a>. 
+% manually: <a href=http://digicamcontrol.com/doc/userguide/interface/downph>digiCamControl>Download photos</a>. 
 %-This class can only stream liveview (low-rez, noisy, ~15Hz) from 
 % <a href=http://digicamcontrol.com/cameras>supported cameras</a>. However digiCamControl does support "Open Broadcaster
 % Software" (OBS) and "XSplit", see <a href=http://digicamcontrol.com/doc/usecases/live>Streaming</a> and <a href=http://digicamcontrol.com/phpbb/search.php?keywords=%5BOBS+%7C+XSplit+%7C+streaming%5D&terms=any&author=&sc=1&sf=all&sr=posts&sk=t&sd=d&st=0&ch=300&t=0&submit=Search>Search Forums</a> for info.
 %-This class does not know when capture+download finish, if its > ~3sec.
+%-No alphanumeric characters found in some Nikon camera properties are
+% being removed. These properties can be queried but can not be set. 
+% eg "-", "." in "center-weighted_area" "active_d-lighting" "long_exp._nr"
 %-digiCamControl issues: http://digicamcontrol.com/phpbb/viewforum.php?f=4
 %
 %Camera Settings:
@@ -45,7 +48,7 @@
 % limit, in either direction, and apply a set change from there.
 %
 %Image Capture:
-%-To reduce capute latency from 0.3-0.6 sec to ~0.05s enable HTTP
+%-To reduce capture latency from 0.3-0.6 sec to ~0.05s enable HTTP
 % webserver, File>Settings>Webserver *RESTART REQUIRED*
 %-To measure the delay and variance try imaging the computer's own clock by
 % running the "Clock" method provided with this class.
@@ -121,14 +124,12 @@
 %
 %Ex: focus stacking
 % C = CameraController;
-% C.Cmd('LiveViewWnd_Show'), pause(1) %turn on live preview
-% C.Capture('0');                %capture and number the first photo
-% for k = 0:5
-%     C.Cmd('LiveView_Focus_MM') %medium step towards near focus
-%     pause(4)                   %wait for focus, adjust delay as needed!
-%     C.Capture(num2str(k));     %capture and number the downloaded photos
+% C.Cmd('LiveViewWnd_Show'), pause(1)  %turn on live preview
+% for k = 0:2                          %take 3 photos
+%     C.Focus(-2,'small',1)            %two small step towards near focus
+%     C.Capture(num2str(k,'Focus%g')); %capture and number the photos
 % end
-% C.Cmd('LiveViewWnd_Hide')      %turn off live preview to save battery
+% C.Cmd('LiveViewWnd_Hide')            %turn off live preview to save battery
 %
 %Ex: stream live view
 %To remove rectangle:  Live View>Display>Show focus rectangle
@@ -147,15 +148,15 @@
 % 
 %Ex: debuging
 % C = CameraController;
-% C.Clock           %show a clock with milliseconds
-% C.dbg = 2; %display commands and replies
-% C.Capture         %capture photo
+% C.Clock      %show a clock with milliseconds
+% C.dbg = 2;   %display commands and replies
+% C.Capture    %capture photo
 %
 %Serge 2017
 % Email questions/bugs/improvements to: <a href="http://mailto:s3rg3y@hotmail.com">s3rg3y@hotmail.com</a>
  
 %Change Log:
-%v1.2.2 (2017-05-05)
+%v1.3 (2017-07-22)
 %-Support a remote http server
 %-Better error handling
 %-Allow commas in filenames
@@ -220,12 +221,12 @@
 % /comment comment           - set in camera comment string 
 % /copyright copyright       - set in camera copyright string 
 % /artist artist             - set in camera artist string 
-
+ 
 %ERROR "Object does not match target type." 
 % C.property.nodownload = 0; C.property.captureinsdram = 0; %PC+CAM 
 % C.property.nodownload = 1; C.property.captureinsdram = 0; %CAM 
 % C.property.nodownload = 1; C.property.captureinsdram = 1; %PC
-
+ 
 %Can use dll files diectly using NET.addAssembly, did not work for me...
 % https://github.com/JonHoy/Matlab_DSLR_Camera_Control/
 %>> camera.CapturePhoto();
@@ -503,9 +504,9 @@ classdef CameraController < handle
         
         function [status,err] = Focus(C,Num,Mode,Wait)
             %Adjust camera focus, or auto-focus
-            % Focus([])    -auto focus, lens must be set to AF
-            % Focus(Num)      -number of steps, +ve=far-field, -ve=near
-            % Focus(Num,Mode)    -type of step {'small'} 'med' 'large'
+            % Focus([])   -auto focus, lens must be set to AF
+            % Focus(Num)     -number of steps, +ve=far field -ve=near field
+            % Focus(Num,Mode)   -type of step {'small'} 'med' 'large'
             % Focus(Num,Mode,Wait)  -time delay per step (sec)
             %Starts live view, lens can be in MF|AF, camera can be in M|A..
             %Step size can be set in: File>Settings>Live view
@@ -522,9 +523,9 @@ classdef CameraController < handle
                 end
                 if nargin<4 || isempty(Wait) %default delay
                     switch lower(Mode(1))
-                        case {1 's'}, Wait = 0.4; %adjust these
-                        case {2 'm'}, Wait = 2;
-                        case {3 'l'}, Wait = 10;
+                        case {1 's'}, Wait = 1; %adjust these defaults
+                        case {2 'm'}, Wait = 5;
+                        case {3 'l'}, Wait = 15;
                     end
                 end
                 if Num > 0, cmd = 'P'; %move towards far focus
@@ -537,7 +538,7 @@ classdef CameraController < handle
                 end
                 for k = 1:abs(Num)
                     [status,err] = C.Cmd(['LiveView_Focus_' cmd]); %send command
-                    pause(Wait)
+                    pause(Wait) %wait for focus adjustment to hopefully finish
                 end
             end
             C.Error(err,nargin<2)
@@ -730,7 +731,7 @@ classdef CameraController < handle
             else
                 [~,err] = C.Run('Set',prp,val); %send command
                 new = C.Get(prp); %varify value after set (can skip this)
-                if ~isequal(new,val) && ~isequal(str2num(lower(new)),str2num(lower(val))) %varify success, allows: 'True'='true'=true=1
+                if ~isequal(new,val) && ~isequal(str2num(lower(new)),str2num(lower(val))) %#ok<ST2NM> %varify success, allows: 'True'='true'=true=1
                     err = sprintf('Set command failed: %s',err);
                 end
             end
@@ -744,11 +745,12 @@ classdef CameraController < handle
             end
             C.Error(err,nargout<2)
         end
-        function s = Options(C)
+        function [s,err] = Options(C)
             %Get a list of valid camera options as struct of cellstr
             params = fieldnames(C.camera); %list of parameters
             for k = 1:numel(params)
-                s.(params{k}) = C.List(['camera.' params{k}])'; %list options for each parameter
+                [s.(params{k}),err] = C.List(['camera.' params{k}]); %list options for each parameter
+                s.(params{k}) = s.(params{k})';
             end
         end
     end
