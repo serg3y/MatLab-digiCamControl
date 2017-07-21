@@ -676,12 +676,13 @@ classdef CameraController < handle
                             %should this issue an error???
                         end
                         out = strrep(out,'Cannot perform runtime binding on a null reference','No camera detected'); %improve some error msgs
-                        if ~status || strcmp(out,'Unknow parameter') || strncmpi(out,'Wrong value',11) || strcmp(out,'No camera detected')
+                        out = strrep(out,'Unknow ','Unknown ');
+                        if ~status || strcmp(out,'Unknown parameter') || strncmpi(out,'Wrong value',11) || strcmp(out,'No camera detected')
                             err = out;
                             out = '';
                         end
                     case 'CMD'
-                        [failed,out] = system(cmd); %run cmd command and read reply
+                        [failed,out] = system(cmd); %run cmd command and read the reply
                         if C.dbg >= 3
                             disp(['ans =' 10 out]) %display replies
                         end
