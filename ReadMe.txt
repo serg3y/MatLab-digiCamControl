@@ -60,6 +60,8 @@ Image Capture:
 -The Capture method blocks code except, but only if acquisition + download
  take more then ~3 sec, then digiCamControl returns without error.
  
+...
+ 
 Ex: download settings, see also "Transfer" in bottom left of GUI
  C = CameraController;
  C.session.folder = 'C:\DSLR';
@@ -93,6 +95,8 @@ Ex: two cameras
  C.Cameras(1), C.property.devicename = 'Cam1'; %change camera name
  C.Cameras(2), C.property.devicename = 'Cam2';
  C.Cmd('CaptureAll')
+ 
+...
  
 Serge 2017
  Questions/bugs/fixes: s3rg3y@hotmail.com
