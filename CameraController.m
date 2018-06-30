@@ -153,7 +153,7 @@
 % C.Capture    %capture photo
 %
 %Serge 2017
-% Email questions/bugs/fixes to: <a href="http://mailto:s3rg3y@hotmail.com">s3rg3y@hotmail.com</a>
+% Questions/bugs/fixes: <a href="http://mailto:s3rg3y@hotmail.com">s3rg3y@hotmail.com</a>
  
 %Change Log:
 %v1.3.1 (2018-02-24)
@@ -259,8 +259,8 @@ classdef CameraController < handle
     %% Constructor
     methods (Hidden = true)
         function C = CameraController(dcc,dbg)
-            if nargin<1 || isempty(dcc), C.dcc = ''; else C.dcc = dcc; end
-            if nargin<2 || isempty(dbg), C.dbg = 1;  else C.dbg = dbg; end
+            if nargin<1 || isempty(dcc), C.dcc = ''; else, C.dcc = dcc; end
+            if nargin<2 || isempty(dbg), C.dbg = 1;  else, C.dbg = dbg; end
             if C.CheckConnection(C.dcc) %prints error msgs, if any
                 disp(['connection type: ' C.connection])
                 disp(['digiCamControl:  ' C.dcc])
@@ -311,7 +311,7 @@ classdef CameraController < handle
                     otherwise,   C.dcc = dcc;
                 end
                 if ~isempty(C.dcc)
-                    if isdir(C.dcc) %assume cmd
+                    if isdir(C.dcc) %#ok<ISDIR> %assume cmd
                         [status,err] = C.TestCMD(C.dcc);
                         if status
                             C.connection = 'CMD';
@@ -450,8 +450,8 @@ classdef CameraController < handle
             % [SN,err] = Cameras(.)  -return error string
             %Use property.serialnumber to get current camera's serial
             [serials,err] = C.List('cameras'); %all cameras serial numbers
-            if isempty(serials) || ischar(serials) && strcmpi(serials,'OK')
-                err = 'No camera detected';
+            if isempty(serials) || strcmpi(serials,'OK')
+                err = 'No camera(s) detected';
                 out = '';
             elseif nargin>1 %select a specific camera
                 if isnumeric(val) %index selection mode
@@ -529,7 +529,7 @@ classdef CameraController < handle
             C.Cmd('LiveViewWnd_Show') %can skip if LiveView is on
             if nargin<2 || isempty(Num)
                 [status,err] = C.Cmd('LiveView_Focus'); %auto focus, user must wait for focus to finish manually
-            elseif Num ~= floor(Num);
+            elseif Num ~= floor(Num)
                 err = 'Focus step must be an integer';
             elseif Num==0
                 %do nothing
@@ -544,11 +544,11 @@ classdef CameraController < handle
                         case {3 'l'}, Wait = 15;
                     end
                 end
-                if Num > 0, cmd = 'P'; %move towards far focus
-                else        cmd = 'M'; %move towards near focus
+                if Num>0, cmd = 'P'; %move towards far focus
+                else,     cmd = 'M'; %move towards near focus
                 end
                 switch lower(Mode(1))
-                    case {1 's'}, %do nothing
+                    case {1 's'} %do nothing
                     case {2 'm'}, cmd = [cmd cmd];
                     case {3 'l'}, cmd = [cmd cmd cmd];
                 end
@@ -572,11 +572,11 @@ classdef CameraController < handle
             else
                 clf(figure(1)), axis off
                 set(gcf,'color','k','name','Clock','numb','off','menu','n','tool','n')
-                h0 = text(0.5,0.95,'time'    ,'fonts',60,'hor','cen','color','w');
-                h1 = text(0.5,0.7 ,'seconds' ,'fonts',60,'hor','cen','color','w');
-                h2 = text(0.5,0.5 ,'tenths'  ,'fonts',60,'hor','cen','color','w');
-                h3 = text(0.5,0.2 ,'hundreds','fonts',60,'hor','cen','color','w');
-                h4 = text(0.5,-0.05,'Delay:' ,'fonts',30,'hor','cen','color','w');
+                h0 = text(0.5,0.95,'time'    ,'fontsize',60,'hor','cen','color','w');
+                h1 = text(0.5,0.7 ,'seconds' ,'fontsize',60,'hor','cen','color','w');
+                h2 = text(0.5,0.5 ,'tenths'  ,'fontsize',60,'hor','cen','color','w');
+                h3 = text(0.5,0.2 ,'hundreds','fontsize',60,'hor','cen','color','w');
+                h4 = text(0.5,-0.05,'Delay:' ,'fontsize',30,'hor','cen','color','w');
                 old = now; %time of previous frame
                 num = 10; %measure time elapsed between n frames to display average
                 lag = nan(1,num);
@@ -686,7 +686,7 @@ classdef CameraController < handle
                         if C.dbg >= 3
                             disp(out) %display replies
                         end
-                        if ~isempty(out) && out(end)==10; %remove trailing linefeeds
+                        if ~isempty(out) && out(end)==10 %remove trailing linefeeds
                             out(end) = [];
                         end
                         if isempty(out)
@@ -877,7 +877,7 @@ classdef CameraController < handle
                 elseif strfind(e.message,'Connection refused'),err = 'HTTP connection refused';
                 elseif strfind(e.message,'UnknownHost'),       err = 'HTTP unknown address';
                 elseif strfind(e.message,'Permission denied'), err = 'HTTP permission denied';
-                else                                           err = ['HTTP ' e.message];
+                else,                                          err = ['HTTP ' e.message];
                 end
             end
             %errors not displayed
@@ -886,9 +886,9 @@ classdef CameraController < handle
             %Check default install location for digiCamControl app
             % [fold,err] = FindDCC
             err = ''; %init
-            if  isdir   (fullfile(char(java.lang.System.getenv('ProgramFiles(x86)')),'digiCamControl'))
+            if     isdir(fullfile(char(java.lang.System.getenv('ProgramFiles(x86)')),'digiCamControl')) %#ok<ISDIR>
                 fold   = fullfile(char(java.lang.System.getenv('ProgramFiles(x86)')),'digiCamControl');
-            elseif isdir(fullfile(char(java.lang.System.getenv('ProgramFiles'     )),'digiCamControl'))
+            elseif isdir(fullfile(char(java.lang.System.getenv('ProgramFiles'     )),'digiCamControl')) %#ok<ISDIR>
                 fold   = fullfile(char(java.lang.System.getenv('ProgramFiles'     )),'digiCamControl');
             else
                 fold = '';
@@ -901,7 +901,7 @@ classdef CameraController < handle
             % [status,err] = TestCMD(dccfolder)
             status = 0; err = ''; %init
             [~,t] = system('tasklist /FI "imagename eq CameraControl.exe"'); %can skip this test, but will take a long time to fail if app is not running
-            if isempty(strfind(t,'CameraControl.exe'))
+            if ~contains(t,'CameraControl.exe')
                 err = 'digiCamControl is not running';
             else
                 exe = fullfile(dccfolder,'CameraControlRemoteCmd.exe');
@@ -945,7 +945,7 @@ classdef CameraController < handle
                 if ~any(I) %try numeric comparison
                     I = strncmpi(opt,str,numel(str));
                     if ~any(I) %try fragment of string comparison
-                        I = ~cellfun(@isempty,strfind(lower(opt),lower(str))); 
+                        I = contains(lower(opt),lower(str)); 
                     end
                 end
             end
