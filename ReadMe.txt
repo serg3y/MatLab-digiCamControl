@@ -60,7 +60,21 @@ Image Capture:
 -The Capture method blocks code except, but only if acquisition + download
  take more then ~3 sec, then digiCamControl returns without error.
  
-...
+Image Download:
+-Download is affected by Transfer mode (in app) and session settings.
+-Transfer mode is set via the main app to: PC & Camera | Camera only, if
+ set to Camera only some session settings will be ignored. Set it to PC
+ & Camera and use session setting "deletefileaftertransfer" if needed.
+-session setting "filenametemplate" works only if "useoriginalfilename" is
+ disabled, and it is applied to downloaded files only, not camera files.
+ It supports many useful [tags], eg: [Date yyyy-MM-dd], [Time hh-mm-ss],
+ [Date yyyy-MM-dd-hh-mm-ss], [Exif.Photo.ExposureTime],
+ [Exif.Photo.FNumber], [Exif.Photo.ISOSpeedRatings], etc 
+ (for a full list go to: Session>Edit Current Session>File Name Template)
+-"filenametemplate" can be set when calling the Capture method and applies
+ to all connected cameras. To distinguish cameras use [Camera Name] or
+ [Camera Counter 4 digit] tags in the template.
+-"folder" does not support [tags], instead use "\" in "filenametemplate".
  
 Ex: download settings, see also "Transfer" in bottom left of GUI
  C = CameraController;
@@ -89,6 +103,13 @@ Ex: simple capture
  C.Capture('[Time hh-mm-ss]') %capture (use time tag as filename)
  file = C.lastfile %get last downloaded filenames
  
+Ex: timed capture
+ C = CameraController;
+ time = ceil(now*24*60*6)/24/60/60; %upcoming whole second
+ file = [datestr(time,'yyyy-mm-dd_HHMMSS.FFF') '_' C.property.devicename]; %timestamp & camera name
+ C.Capture(file,time); %capture
+ datestr(time)
+ 
 Ex: two cameras
  C = CameraController;
  C.session.filenametemplate = '[Camera Name]'; %set filename pattern
@@ -96,8 +117,39 @@ Ex: two cameras
  C.Cameras(2), C.property.devicename = 'Cam2';
  C.Cmd('CaptureAll')
  
-...
+Ex: focus stacking
+ C = CameraController;
+ C.Cmd('LiveViewWnd_Show'), pause(1) %turn on live preview
+ for k = 0:2 %take 3 photos
+ C.Focus(-2,'small',1) %two small step towards near focus
+ C.Capture(num2str(k,'Focus%g')); %capture and number the photos
+ end
+ C.Cmd('LiveViewWnd_Hide') %turn off live preview to save battery
+ 
+Ex: stream live view
+To remove rectangle: Live View>Display>Show focus rectangle
+To reduce lag enable: Live View>Display>No processing
+ C = CameraController;
+ C.Cmd('LiveViewWnd_Show'); %start live view
+ C.Cmd('All_Minimize'); %minimise digiCamControl
+ pause(3) %wait for live view
+ clf, h = imshow(C.LiveView); %prepare figure
+ uicontrol('str','Capture','call','C.Capture') %capture button
+ while ishandle(h) %loop until closed
+ set(h,'cdata',C.LiveView) %update live view
+ drawnow %update display
+ end
+ C.Cmd('LiveViewWnd_Hide'); %stop live view
+ 
+Ex: debugging
+ C = CameraController;
+ C.Clock %show a clock with milliseconds
+ C.dbg = 2; %display commands and replies
+ C.Capture %capture photo
  
 Serge 2017
  Questions/bugs/fixes: s3rg3y@hotmail.com
+ 
+ Reference page in Doc Center
+ doc CameraController
  
