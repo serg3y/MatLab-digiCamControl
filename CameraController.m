@@ -113,9 +113,9 @@
 % 
 %Ex: two cameras
 % C = CameraController;
-% C.session.filenametemplate = '[Camera Name]'; %set filename pattern
-% C.Cameras(1), C.property.devicename = 'Cam1'; %change camera name
+% C.Cameras(1), C.property.devicename = 'Cam1'; %camera name
 % C.Cameras(2), C.property.devicename = 'Cam2';
+% C.session.filenametemplate = '[Camera Name]\[Time hh-mm-ss]'; %filename 
 % C.Cmd('CaptureAll')
 % 
 %Ex: focus stacking
