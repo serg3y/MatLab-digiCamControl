@@ -9,7 +9,7 @@
 %2.Enable webserver: File>Settings>Webserver>Enable>RESTART APP.
 %3.Connect one or more cameras using USB cable (or WiFi if supported).
 %4.For full control set camera to (M) and lens to (MF).
-%5.Ensure camera is working through digiCamControl.
+%5.Use digiCamControl to ensure camera is working.
 %6.Try the examples bellow and read this help.
 % 
 %Remarks:
@@ -24,8 +24,8 @@
 % any Windows/Linux computer on the network or via the <a href=http://digicamcontrol.com/doc/userguide/settings#webserver>internet</a>. 
 %-Visit http://digiCamControl.com for <a href=http://digicamcontrol.com/doc>documentation</a>, <a href=http://digicamcontrol.com/phpbb/>forums</a> and to <a href=http://digicamcontrol.com/donate>donate</a>.
 %-Method in this class are Capitalised and have additional descriptions.
-%-When this class is created it does a one of retrieval of allowed camera
-% options. Redefine this class when swapping cameras.
+%-When this class is created it does a one-off retrieval of allowed camera
+% options. Re-create this class when swapping cameras.
 % 
 %Limitations:
 %-This class cannot download old photos, user has to use digiCamControl app
@@ -33,11 +33,14 @@
 %-This class can only stream liveview (low-rez, noisy, ~15Hz) from 
 % <a href=http://digicamcontrol.com/cameras>supported cameras</a>. However digiCamControl does support "Open Broadcaster
 % Software" (OBS) and "XSplit", see <a href=http://digicamcontrol.com/doc/usecases/live>Streaming</a> and <a href=http://digicamcontrol.com/phpbb/search.php?keywords=%5BOBS+%7C+XSplit+%7C+streaming%5D&terms=any&author=&sc=1&sf=all&sr=posts&sk=t&sd=d&st=0&ch=300&t=0&submit=Search>Search Forums</a> for info.
-%-This class does not know when capture+download finish, if its > ~3sec.
-%-No alphanumeric characters found in some Nikon camera properties are
-% being removed. These properties can be queried but can not be set. 
+%-The Capture method blocks code, but if capture & download takes more then
+% ~3 sec digiCamControl may returns without error while still capturing. 
+%-Non-alphanumeric characters found in some Nikon camera properties are
+% being removed. These properties can be read but cannot be set. 
 % eg "-", "." in "center-weighted_area" "active_d-lighting" "long_exp._nr"
 %-digiCamControl issues: http://digicamcontrol.com/phpbb/viewforum.php?f=4
+%-Focus method does not know how long it needs to wait after a focus change
+% is requested, delays are hard coded.
 % 
 %Camera Settings:
 %-Some settings will not have affect if camera is not in Manual mode (M).
@@ -45,7 +48,7 @@
 %-Focus step size & speed can be modified in: <a href=http://digicamcontrol.com/doc/userguide/settings#live-view>File>Settings>Live view</a>
 %-Note: Lenses use servo motors which have no discrete physical 'steps'. To
 % achieve a specific focus reproducibly try to go to the lens's physical
-% limit, in either direction, and apply a set change from there.
+% limit, in either direction, and apply the same 'steps' from there.
 % 
 %Image Capture:
 %-To reduce capture latency from 0.3-0.6 sec to ~0.05s ensure webserver is
@@ -57,8 +60,6 @@
 % lag of 0.005-0.020 sec between consecutive cameras.
 %-To record video turn on live preview using Cmd('LiveViewWnd_Show') and
 % user Cmd('StartRecord') and Cmd('StopRecord').
-%-The Capture method blocks code except, but only if acquisition + download
-% take more then ~3 sec, then digiCamControl returns without error.
 % 
 %Image Download:
 %-Download is affected by Transfer mode (in app) and session settings.
@@ -379,7 +380,8 @@ classdef CameraController < handle
         end
         
         function [I,err] = LiveView(C)
-            err = ''; I = []; %init
+            err = ''; %init
+            I = [];
             if strcmp(C.connection,'HTTP')
                 try
                     I = imread(['http://' C.dcc ':5513/liveview.jpg'],'jpg');
@@ -388,13 +390,13 @@ classdef CameraController < handle
                         err = 'HTTP connection timed out';
                     elseif strcmp(e.identifier,'MATLAB:imagesci:jpeg_depth:unhandledLibraryError')
                         err = 'Live view not active';
-                        %alternative is to turn on live view now and wait
-                        %upto ~4 sec for image, however when live view is
+                        %alternative is to turn on live view and wait
+                        %upto ~4 sec for image, however when live-view is
                         %turned off the old live view image is cached and
-                        %there is no way to tell that live view is actualy
-                        %off. So onus is on user to ensure live view is
+                        %there is no way to tell that live view is actually
+                        %off. So the onus is on user to ensure live view is
                         %turned on and is running.
-                        % warning('off','MATLAB:imagesci:jpeg_depth:libraryMessage') %supress repeated warnings
+                        % warning('off','MATLAB:imagesci:jpeg_depth:libraryMessage') %suppress repeated warnings
                         % C.Cmd('LiveViewWnd_Show'); %start live view
                         % C.Cmd('All_Minimize');     %minimise live view window
                         % for k = 1:40
@@ -543,11 +545,11 @@ classdef CameraController < handle
             %Display a clock with miliseconds for time tests
             % Clock   -start in new MatLab session so as not to block code
             % Clock(1)  -start using this session, blocking code execution
-            if nargin<2 || ~run_in_this_session %start as new process
+            if nargin<2 || ~run_in_this_session %start in a new process
                 fprintf('Starting another MatLab session to display clock...\n')
-                %UGLY! can this be done using threads?
                 %!matlab -nodesktop -nosplash -minimize -r "try C=CameraController;C.Clock(1);catch,exit,end" & 
                 !matlab -nosplash -minimize -r "try C=CameraController;com.mathworks.mde.desk.MLDesktop.getInstance.getMainFrame.hide;C.Clock(1);catch,exit,end" &
+                %^UGLY! can this be done with threads?
             else %run with this MatLab session (block code)
                 clf(figure(1)), axis off
                 set(gcf,'color','k','name','Clock','numb','off','menu','n','tool','n')
