@@ -51,7 +51,7 @@
 %-To reduce capture latency from 0.3-0.6 sec to ~0.05s ensure webserver is
 % enabled, File>Settings>Webserver>Enable>RESTART APP
 %-To measure delay and variance try imaging the computer's own clock by
-% calling the "Clock" method provided with this class, C.Clock, however
+% calling the Clock method provided with this class, C.Clock, however
 % I do not know how to measure monitor display latency and variance.
 %-Cmd('CaptureAll') will trigger all connected cameras but there will be a
 % lag of 0.005-0.020 sec between consecutive cameras.
@@ -143,14 +143,15 @@
 % 
 %Ex: debugging
 % C = CameraController;
-% C.Clock %show a clock with milliseconds
+% C.Clock %show clock (take timed photo of clock to measure capture delay)
 % C.dbg = 2; %display commands and replies
-% C.Capture %capture photo
 % 
 %Serge 2017
 % Questions/bugs/fixes: <a href="http://mailto:s3rg3y@hotmail.com">s3rg3y@hotmail.com</a>
  
 %Change Log:
+%v1.3.1.2 (2018-07-03)
+%-mostly comments
 %v1.3.1 (2018-02-24)
 %-bunch of minor stuff
 %v1.3 (2017-07-22)
@@ -159,8 +160,8 @@
 %-Allow commas in filenames
 %-Minor changes and better help
  
-%Update ReadMe.txt:
-% fprintf(fopen('ReadMe.txt','w'),'%s',regexprep(help('CameraController'),{'<a .*?>|</a>' '\n ' ' *' '\n\n'},{'' '\n' ' ' '\n \n'}));fclose all
+%Description for MatLab central:
+% clc,disp(regexprep(help('CameraController'),{'<a .*?>|</a>|^ |.{63}$' '\n ' ' *'},{'' '\n' ' '})) 
  
 %Example webserver commands:
 % http://localhost:5513                                                     %primitive http GUI 
@@ -542,12 +543,12 @@ classdef CameraController < handle
             %Display a clock with miliseconds for time tests
             % Clock   -start in new MatLab session so as not to block code
             % Clock(1)  -start using this session, blocking code execution
-            if nargin<2 || ~run_in_this_session
+            if nargin<2 || ~run_in_this_session %start as new process
                 fprintf('Starting another MatLab session to display clock...\n')
                 %UGLY! can this be done using threads?
                 %!matlab -nodesktop -nosplash -minimize -r "try C=CameraController;C.Clock(1);catch,exit,end" & 
                 !matlab -nosplash -minimize -r "try C=CameraController;com.mathworks.mde.desk.MLDesktop.getInstance.getMainFrame.hide;C.Clock(1);catch,exit,end" &
-            else
+            else %run with this MatLab session (block code)
                 clf(figure(1)), axis off
                 set(gcf,'color','k','name','Clock','numb','off','menu','n','tool','n')
                 h0 = text(0.5,0.95,'time'    ,'fontsize',60,'hor','cen','color','w');
@@ -556,7 +557,7 @@ classdef CameraController < handle
                 h3 = text(0.5,0.2 ,'hundreds','fontsize',60,'hor','cen','color','w');
                 h4 = text(0.5,-0.05,'Delay:' ,'fontsize',30,'hor','cen','color','w');
                 old = now; %time of previous frame
-                num = 10; %measure time elapsed between n frames to display average
+                num = 10; %measure time elapsed between n frames to display average time per frame
                 lag = nan(1,num);
                 idx = 1; %circular counter
                 %addlistener(h4,'String','PreSet',@(~,~)H.UpdateClock(h0,h1,h2,h3,h4,old,num,OLD,idx)); %this isn't working execution
@@ -573,39 +574,13 @@ classdef CameraController < handle
                     lag(idx) = new-old;   %update LAG amounts
                     idx = mod(idx,num)+1; %update circular counter
                     old = new;            %update oprevious frame time
-                    set(h4,'str',num2str(nanmean(lag)*24*60*60,'Delay: >%.3f sec'))
+                    set(h4,'str',num2str(nanmean(lag)*24*60*60,'Delay > %.3f sec'))
                     drawnow
                 end
             end
         end
         
     end
-    
-%     methods
-%         function a=UpdateClock(H,h0,h1,h2,h3,h4,o,n,D,c)
-% %             try %when figure closes, fail silently
-%                 while true
-%                     pause(0.0001)
-%                     t = now;
-%                     p1 = floor(mod(t*24*60*60    ,10)); %sec
-%                     p2 = floor(mod(t*24*60*60*10 ,10)); %1/10 sec
-%                     p3 = floor(mod(t*24*60*60*100,10)); %1/100 sec
-%                     set(h1,'pos',[p1/10 0.7 0],'str',num2str(p1))
-%                     set(h2,'pos',[p2/10 0.5 0],'str',num2str(p2))
-%                     set(h3,'pos',[p3/10 0.3 0],'str',num2str(p3))
-%                     d = t - o;
-%                     D(c) = d;
-%                     c = mod(c,n)+1;
-%                     o = t;
-%                     t = datestr(t,'HH:MM:SS.FFF');
-%                     set(h0,'str',t)
-%                     set(h4,'str',num2str(nanmean(D)*24*60*60,'%.3fs'))
-%                     drawnow
-%                 end
-% % H.UpdateClock(h0,h1,h2,h3,h4,o,n,D,c)
-% %             end
-%         end
-%     end
     
     %% Hidden methods
     methods (Hidden = true)
@@ -744,7 +719,7 @@ classdef CameraController < handle
             C.Error(err,nargout<2)
         end
         function [s,err] = Options(C)
-            %Get a list of valid camera options as struct of cellstr
+            %Returns a list of valid camera options as struct
             params = fieldnames(C.camera); %list of parameters
             for k = 1:numel(params)
                 [s.(params{k}),err] = C.List(['camera.' params{k}]); %list options for each parameter
@@ -774,8 +749,6 @@ classdef CameraController < handle
             if ~isempty(s)
                 s = regexp(s,'session\.(.*?)=(.*)','tokens','once');
                 s = cat(1,s{:})';
-                %s(2,strcmpi(s(2,:),'True' )) = {true};
-                %s(2,strcmpi(s(2,:),'False')) = {false};
                 s(2,:) = regexprep(s(2,:),{'^False$' '^True$'},{'false' 'true'}); %change case for consistancy
                 s = struct(s{:});
             end
@@ -785,8 +758,6 @@ classdef CameraController < handle
             if ~isempty(s)
                 s = regexp(s,'property\.(.*?)=(.*)','tokens','once');
                 s = cat(1,s{:})';
-                %s(2,strcmpi(s(2,:),'True' )) = {true};
-                %s(2,strcmpi(s(2,:),'False')) = {false};
                 s(2,:) = regexprep(s(2,:),{'^False$' '^True$'},{'false' 'true'}); %change case for consistency
                 s = struct(s{:});
             end
@@ -801,9 +772,9 @@ classdef CameraController < handle
         %will first trigger a get method (not needed) and then set method.
         function set.camera(C,new)
             %dcc can list valid option for each camera.parameter, so we
-            %can do a bit of common sense check to guess which value the
+            %can do some common sense checks to guess which value the
             %user wanted or tell the user valid options if we can't figure
-            %it out. But there are a few strange transient parameter that
+            %it out. But there are a few strange transient parameters that
             %make this tricky, eg camera.focusmode & camera.bracketing
             %which are sometimes not reported by "Get camera".
             old = C.camera; %get current settings
@@ -894,7 +865,6 @@ classdef CameraController < handle
                     end
                 end
             end
-            %errors not displayed
         end
         function [str,err] = CleanCMD(str)
             %clean up cmd responce (faster then using /clean argument)
@@ -909,7 +879,6 @@ classdef CameraController < handle
                 end
                 str = regexprep(str,{'\\\\' '"'},{'\\' ''}); %remove any escape character and quotes
             end
-            %errors not displayed
         end
         function [I,mch] = Match(str,opt)
             %Flexible comparison of cellstr to string, return best match
@@ -956,6 +925,5 @@ classdef CameraController < handle
         function b = le(varargin),          b = le@handle(varargin{:});          end
         function b = gt(varargin),          b = gt@handle(varargin{:});          end
         function b = ge(varargin),          b = ge@handle(varargin{:});          end
-        %isvalid is a sealed method and cannot be overloaded
     end
 end
