@@ -831,7 +831,6 @@ classdef CameraController < handle
                 else,                                          err = ['HTTP ' e.message];
                 end
             end
-            %errors not displayed
         end
         function [fold,err] = FindDCC
             %Check default install location for digiCamControl app
@@ -845,7 +844,6 @@ classdef CameraController < handle
                 fold = '';
                 err = 'digiCamControl folder not found';
             end
-            %errors not displayed
         end
         function [status,err] = TestCMD(dccfolder)
             %Test CMD utility communication
