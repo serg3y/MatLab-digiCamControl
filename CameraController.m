@@ -1,22 +1,27 @@
-%Controller for tethered DSLR cameras using <a href=http://digicamcontrol.com/>digiCamControl</a> (Windows app) 
-% C = CameraController    -create class and auto-detect digiCamControl
-% C = CameraController(ip)  -address of pc running digiCamControl webserver
-% C = CameraController(fold)  -folder containing digiCamControl app
-% 
-%Instruction:
-%1.Install and run digiCamControl, BETA v2.0.69 or greater, from:
+%CameraController v1.3.2 for tethered DSLR cameras using <a href=http://digicamcontrol.com/>digiCamControl</a>. 
+%Use this class to control supported cameras - set settings such as ISO,
+%exposure, focus, aperture(fnumber), white balance, compression, stream
+%liveview, capture photos & video, configure file download, etc.
+% C = CameraController   -create class and detect digiCamControl app
+% C = CameraController(app)  -set custom location of digiCamControl app
+% C = CameraController(app,debug)  -set debug level [0-3] (default:1)
+%app: address and port number of HTTP webserver (default: 'localhost:5513')
+% OR folder containing digiCamControll's CMD remote utility (default:
+% %ProgramFiles(x86)%\digiCamControl or %ProgramFiles%\digiCamControl where
+% %*% are system environment variables). If left empty the class will
+% first try the default HTTP webserver then default CMD utility folders.
+%debug: 0=silent, 1=minimal (default), 2=print requests, 3=print replies
+%
+%Setup:
+%1.Install and run digiCamControl, BETA v2.0.69 or greater:
 %  https://sourceforge.net/projects/digicamcontrol/files/latest/download
 %2.Enable webserver: File>Settings>Webserver>Enable>RESTART APP.
-%3.Connect one or more cameras using USB cable (or WiFi if supported).
-%4.For full control set camera to (M) and lens to (MF).
-%5.Use digiCamControl to ensure camera is working.
-%6.Try the examples bellow and read this help.
+%3.Connect one or more cameras using USB cable (or WiFi if supported?).
+%4.For full programmatic control set camera to (M) and lens to (MF).
+%5.Use digiCamControl app to ensure camera is working.
 % 
 %Remarks:
-%-This class can be used to control supported cameras, stream liveview,
-% capture photos & video, download captured files, change settings such as
-% ISO, exposure, focus, aperture(fnumber), white balance, compression, etc. 
-%-digiCamControl is a multi purpose, free, open source, but Windows only
+%-digiCamControl is a multi purpose, free, open source, Windows only
 % application that can control a host of <a href=http://digicamcontrol.com/cameras>supported cameras</a>. 
 %-This class communicates with camera(s) via digiCamControl's included 
 % <a href=http://digicamcontrol.com/doc/userguide/web>HTTP webserver</a>(recommended) or <a href=http://digicamcontrol.com/doc/userguide/remoteutil>CMD Utility</a>. 
@@ -25,7 +30,7 @@
 %-Visit http://digiCamControl.com for <a href=http://digicamcontrol.com/doc>documentation</a>, <a href=http://digicamcontrol.com/phpbb/>forums</a> and to <a href=http://digicamcontrol.com/donate>donate</a>.
 %-Method in this class are Capitalised and have additional descriptions.
 %-When this class is created it does a one-off retrieval of allowed camera
-% options. Re-create this class when swapping cameras.
+% options. Reinitialise this class when swapping cameras.
 % 
 %Limitations:
 %-This class cannot download old photos, user has to use digiCamControl app
@@ -33,14 +38,13 @@
 %-This class can only stream liveview (low-rez, noisy, ~15Hz) from 
 % <a href=http://digicamcontrol.com/cameras>supported cameras</a>. However digiCamControl does support "Open Broadcaster
 % Software" (OBS) and "XSplit", see <a href=http://digicamcontrol.com/doc/usecases/live>Streaming</a> and <a href=http://digicamcontrol.com/phpbb/search.php?keywords=%5BOBS+%7C+XSplit+%7C+streaming%5D&terms=any&author=&sc=1&sf=all&sr=posts&sk=t&sd=d&st=0&ch=300&t=0&submit=Search>Search Forums</a> for info.
-%-The Capture method blocks code, but if capture & download takes more then
-% ~3 sec digiCamControl may returns without error while still capturing. 
 %-Non-alphanumeric characters found in some Nikon camera properties are
 % being removed. These properties can be read but cannot be set. 
 % eg "-", "." in "center-weighted_area" "active_d-lighting" "long_exp._nr"
 %-digiCamControl issues: http://digicamcontrol.com/phpbb/viewforum.php?f=4
 %-Focus method does not know how long it needs to wait after a focus change
-% is requested, delays are hard coded.
+% is requested, see Focus method help to set custom delays.
+%-LiveView can only be 'streamed' when using HTTP webserver.
 % 
 %Camera Settings:
 %-Some settings will not have affect if camera is not in Manual mode (M).
@@ -77,145 +81,56 @@
 % [Camera Counter 4 digit] tags in the template.
 %-"folder" does not support [tags], instead use "\" in "filenametemplate".
 % 
-%Ex: download settings, see also "Transfer" in bottom left of GUI
-% C = CameraController;
-% C.session.folder = 'C:\DSLR';
-% C.session.filenametemplate = '[Camera Name]\[Date yyyy-MM-dd-hh-mm-ss]';
-% C.session.useoriginalfilename = 0; %ignores "filenametemplate"
-% C.session.downloadthumbonly = 0; %not working (v2.0.72.9)
-% C.session.downloadonlyjpg = 0; %only used if "PC+CAM"
-% C.session.deletefileaftertransfer = 1; %only has affect if Transfer="Cam+PC" and affectively converts it to "PC only"
-% C.session.asksavepath = 0; %dialog popup for after capture
-% C.session.allowoverwrite = 0; %overwrite if file exists
-% C.session.lowercaseextension = 1; %use "*.jpg" instead of "*.JPG"
-% 
-%Ex: camera settings
-% C = CameraController;
-% C.camera.isonumber = 100;
-% C.camera.fnumber = 4;
-% C.camera.shutterspeed = 1/200;
+%Example:
+% C = CameraController; %initialise class, check cameras
+% C.session.folder = 'C:\DSLR'; %set download folder
+% C.session.filenametemplate = '[Camera Name]\[Date yyyy-MM-dd-hh-mm-ss]'; %set file name
+% C.session.lowercaseextension = 1; %use ".jpg" instead of ".JPG"
+% C.camera.drive_mode = 'Single-Frame Shooting'; %camera settings
 % C.camera.compressionsetting = 'Large Fine JPEG';
-% C.camera.drive_mode = 'Single-Frame Shooting';
-% 
-%Ex: simple capture
-% C = CameraController; %initialise
-% C.Capture %capture (filename set by "session.filenametemplate") 
-% C.Capture('MyPhoto') %capture (set custom filename)
-% C.Capture('[Time hh-mm-ss]') %capture (use time tag as filename)
-% file = C.lastfile %get last downloaded filenames
-% 
-%Ex: timed capture
-% C = CameraController;
-% time = ceil(now*24*60*6)/24/60/60; %upcoming whole second
-% file = [datestr(time,'yyyy-mm-dd_HHMMSS.FFF') '_' C.property.devicename]; %timestamp & camera name
-% C.Capture(file,time); %capture
-% datestr(time)
-% 
-%Ex: two cameras
-% C = CameraController;
-% C.Cameras(1), C.property.devicename = 'Cam1'; %camera name
-% C.Cameras(2), C.property.devicename = 'Cam2';
-% C.session.filenametemplate = '[Camera Name]\[Time hh-mm-ss]'; %filename 
-% C.Cmd('CaptureAll')
-% 
-%Ex: focus stacking
-% C = CameraController;
-% C.Cmd('LiveViewWnd_Show'), pause(1)  %turn on live preview
-% for k = 0:2                          %take 3 photos
-%     C.Focus(-2,'small',1)            %two small step towards near focus
-%     C.Capture(num2str(k,'Focus%g')); %capture and number the photos
-% end
-% C.Cmd('LiveViewWnd_Hide')            %turn off live preview to save battery
-% 
-%Ex: stream live view
-%To remove rectangle: Live View>Display>Show focus rectangle
-%To reduce lag enable: Live View>Display>No processing
-% C = CameraController;
-% C.Cmd('LiveViewWnd_Show'); %start live view
-% C.Cmd('All_Minimize'); %minimise digiCamControl
-% pause(3) %wait for live view
-% clf, h = imshow(C.LiveView); %prepare figure
-% uicontrol('str','Capture','call','C.Capture') %capture button
-% while ishandle(h) %loop until closed
-%     set(h,'cdata',C.LiveView) %update live view
-%     drawnow %update display
-% end
-% C.Cmd('LiveViewWnd_Hide'); %stop live view
-% 
-%Ex: debugging
-% C = CameraController;
-% C.Clock %show clock (take timed photo of clock to measure capture delay)
-% C.dbg = 2; %display commands and replies
+% C.camera.isonumber = 3200;
+% C.camera.fnumber = 5.6;
+% C.camera.shutterspeed = 1/200;
+% C.Capture %capture now
+% C.lastfile %get last filename (does not include folder)
 % 
 %Serge 2017
 % Questions/bugs/fixes: <a href="http://mailto:s3rg3y@hotmail.com">s3rg3y@hotmail.com</a>
  
+%TODO:
+%-Allow camera to be changed on the fly, but how to detect camera change
+% without increasing capture delay by doing a camera check before each command?
+%-Due to the way this class is structured (using structs to group multiple
+% properties) when setting a property a get method is run, which is not
+% needed, and then the set method, but how to avoid this while
+% maintaining the user interface? 
+%-detect CMD utility location even if digiCamControll is installed to
+% locations other then %ProgramFiles% or %ProgramFiles(x86)%.
+%-Still needs a lot more testing, especially on Linux.
+ 
 %Change Log:
+%v1.3.2 (2018-07-21)
+%-get.camera now returns empty struct instead of empty char on error
+%-detailed examples moved to separate file
+%-bug fix in property assignment, eg fnumber=4 could set it to 14.0
+%-capture "lag" is now a class property rather then input to Capture
+%-fixed get.camera to deal with duplicated fields (reported by Marek)
+%-debug property no longer hidden
+%-minor changes
+%-fixed bug that prevented running digicamcontroll on another computer
+%-ip can now include a port number, eg 'localhost:5513' (default port:5513)
 %v1.3.1.2 (2018-07-03)
 %-mostly comments
 %v1.3.1 (2018-02-24)
 %-bunch of minor stuff
 %v1.3 (2017-07-22)
-%-Support a remote http server
+%-Support a remote http webserver
 %-Better error handling
 %-Allow commas in filenames
 %-Minor changes and better help
  
 %Description for MatLab central:
 % clc,disp(regexprep(help('CameraController'),{'<a .*?>|</a>|^ |.{63}$' '\n ' ' *'},{'' '\n' ' '})) 
- 
-%Example webserver commands:
-% http://localhost:5513                                                     %primitive http GUI 
-% http://localhost:5513/?SLC=CaptureNoAf&param1=Test\[Time%20hh-mm-ss]      %capture and set filename
-% http://localhost:5513/?CMD=Capture                                        %capture and display controls webpage with currently selected (previous) photo
-% http://localhost:5513/?CMD=CaptureAll                                     %capture with all connected cameras
-% http://localhost:5513/?SLC=capture&camera=255076227371                    %capture with specified camera, NOT WORKING, Cam1 fires regardless of number
-% http://localhost:5513/?SLC=capture&param1=filename&param2=                %param2 is ???
-% http://localhost:5513/preview.jpg                                         %preview (~500k) currently selected photo
-% http://localhost:5513/?CMD=LiveViewWnd_Show                               %start and display live preview
-% http://localhost:5513/liveview.jpg                                        %live preview current frame
-% http://localhost:5513/?CMD=LiveViewWnd_Hide                               %stop live preview
-% http://localhost:5513/image/IMG_1200.jpg                                  %download image from hdd (must already have been downloaded from camera)
-% http://localhost:5513/thumb/large/IMG_1145.jpg                            %thumb large from hdd (must already have been downloaded from camera)
-% http://localhost:5513/thumb/small/IMG_1145.jpg                            %thumb small from hdd (must already have been downloaded from camera)
-% http://localhost:5513/session.json                                        %current session data
-% http://localhost:5513/?SLC=Get&param1=lastcaptured
-% http://localhost:5513/?SLC=List&param1=camera
-% http://localhost:5513/?SLC=List&param1=camera.fnumber
-% http://localhost:5513/?SLC=Set&param1=session.folder&param2=c:\pictures
-% http://localhost:5513/?SLC=Set&param1=session.filenametemplate&param2=capture1
- 
-%Example CameraControlCmd.exe commands: work when digiCamControl is off, but very SLOW!
-% system('"C:\Program Files (x86)\digiCamControl\CameraControlCmd.exe" /filename E:\test\test.jpg /capture')
-% system('"C:\Program Files (x86)\digiCamControl\CameraControlCmd.exe" /captureallnoaf')
-%See also: http://digicamcontrol.com/doc/userguide/cmd
-%Applies to all cameras:
-% /help                      - this screen
-% /capture                   - capture photo
-% /capturenoaf               - capture photo without autofocus
-% /captureall                - capture photo with all connected devices
-% /captureallnoaf            - capture photo without autofocus with all devices
-% /format                    - format camera card(s)
-% /session session_name      - use session [session_name]
-% /preset preset_name        - use preset [preset_name]
-% /folder path               - set the photo save folder
-% /filenametemplate template - set the photo save file name template
-% /filename fileName         - set the photo save file name
-% /counter number            - set the photo initial counter
-% /wait [mseconds]           - wait for a keypress or milliseconds
-% /nop                       - force past usage with no parameters 
-% /verbose                   - lots of status messages 
-%Applies to main camera:
-% /export filename.txt       - export current connected camera properties 
-% /iso isonumber             - set the iso number ex. 100 200 400 
-% /aperture aperture         - set the aperture number ex. 9,5 8,0 
-% /shutter shutter speed     - set the shutter speed ex. "1/50" "1/250" 1s 3s 
-% /ec compensation           - set the exposure comp. -1,5 +2 
-% /compression compression   - set the compression Ex: JPEG_(NORMAL) RAW_+_JPEG_(FINE) 
-%Nikon only:
-% /comment comment           - set in camera comment string 
-% /copyright copyright       - set in camera copyright string 
-% /artist artist             - set in camera artist string 
  
 classdef CameraController < handle
     %% Properties
@@ -225,30 +140,39 @@ classdef CameraController < handle
         property %GET/SET device  settings: serialnumber, devicename, nodownload, counter, counterinc, captureinsdram, ...
     end
     properties (SetAccess = private) %read only
-        connection  %protocol used to communicate with digiCamControl (set by CheckConnection)
-        options     %list of valid camera options
-        cmds        %list of valid commands
-        lastfile    %last downloaded filename
-        lasterr     %last error message
+        options    %list of valid camera options (cached during class creation)
+        cmds       %list of valid commands (cached during class creation)
+        connection %protocol used to communicate with digiCamControl (set by CheckConnection)
+        lastfile   %last downloaded filename
+        lasterr    %last error message
     end
-    properties (Hidden = true) %hidden
+    properties
         dcc %ip/hostname of PC running digiCamControl webserver OR folder on this computer with digiCamControl CMD utility
-        dbg %debug level: 1-print requests, 2-print replies (interfears with using TAB for outo-compleate)
+        debug %debug level: 0-silent, 1-basic info (default), 2-print requests, 3-print replies 
+        lag %timed capture will start this many seconds ahead of specified time to adjust for interface and camera delays (default: 0.05 for HTTP and 0.4 for CMD)
     end
     
     %% Constructor
     methods (Hidden = true)
-        function C = CameraController(dcc,dbg)
-            if nargin<1 || isempty(dcc), C.dcc = ''; else, C.dcc = dcc; end
-            if nargin<2 || isempty(dbg), C.dbg = 1;  else, C.dbg = dbg; end
+        function C = CameraController(dcc,debug)
+            if nargin<1 || isempty(dcc),   C.dcc = '';  else, C.dcc   = dcc; end
+            if nargin<2 || isempty(debug), C.debug = 1; else, C.debug = debug; end
             if C.CheckConnection(C.dcc) %prints error msgs, if any
-                disp(['connection type: ' C.connection])
-                disp(['digiCamControl:  ' C.dcc])
+                switch C.connection
+                    case 'HTTP', C.lag = 0.05;
+                    case 'CMD',  C.lag = 0.4;
+                end
+                if C.debug > 0
+                    fprintf('connection type is: ''%s'' (capture lag set to %g sec, affects only "timed capture")\n',C.connection,C.lag)
+                    fprintf('digiCamControl location is: ''%s''\n',C.dcc)
+                end
                 [name,serials] = C.CheckCamera;
                 if ~isempty(name)
                     t = sprintf('%s, ',serials{:});
-                    disp(['camera serials:  ' t(1:end-2)])
-                    disp(['current camera:  ' name])
+                    if C.debug > 0
+                        fprintf('connected camera serials are: ''%s''\n',t(1:end-2))
+                        fprintf('current camera name is: ''%s''\n',name)
+                    end
                 end
             end
         end
@@ -265,38 +189,43 @@ classdef CameraController < handle
             % C.CheckConnection(fold)   -use custom cmd utility folder
             % [status,err] = C.CheckConnection
             C.connection = ''; err = ''; %init
-            if nargin<2 || isempty(dcc) %try both HTTP and CMD
-                C.dcc = 'localhost';
+            if nargin<2 || isempty(dcc) %auto: try default HTTP, then default CMD location
+                C.dcc = 'localhost:5513'; %default HTTP
                 [status,err1] = C.TestHTTP(C.dcc);
                 if status
                     C.connection = 'HTTP'; %success
                 else
                     [C.dcc,err2] = C.FindDCC;
                     if ~isempty(err2)
-                        err = [err1 ' + ' err2];
+                        err = [err1 ', ' err2]; %multiple errors
                     else
                         [status,err3] = C.TestCMD(C.dcc);
-                        if status
-                            C.connection = 'CMD'; %success (slow connection)
-                            C.Error('Turn on HTTP webserver to reduce latency and to stream LiveView')
+                        if status %success
+                            C.connection = 'CMD';
+                            if C.debug > 0
+                                fprintf('Note: It is recomended to use HTTP webserver to reduce capture latency and to stream LiveView\n')
+                            end
                         else
-                            err = [err1 ' + ' err3];
+                            err = [err1 ', ' err3]; %multiple errors
                         end
                     end
                 end
             else %try one
                 switch upper(dcc)
-                    case 'HTTP', C.dcc = 'localhost'; %default HTTP
-                    case 'CMD',  [C.dcc,err] = C.FindDCC;
-                    otherwise,   C.dcc = dcc;
+                    case 'HTTP', C.dcc = 'localhost:5513'; %try default HTTP location
+                    case 'CMD',  [C.dcc,err] = C.FindDCC; %try default CMD location
+                    otherwise,   C.dcc = dcc; %custom location
                 end
                 if ~isempty(C.dcc)
-                    if isdir(C.dcc) %#ok<ISDIR> %assume cmd
+                    if exist(C.dcc,'file')==7 %isdir, must be CMD location
                         [status,err] = C.TestCMD(C.dcc);
                         if status
                             C.connection = 'CMD';
                         end
-                    else
+                    else %assume HTTP location
+                        if ~any(C.dcc==':') %address only, no port
+                            C.dcc = [C.dcc ':5513']; %append default port
+                        end
                         [status,err] = C.TestHTTP(C.dcc);
                         if status
                             C.connection = 'HTTP';
@@ -318,15 +247,14 @@ classdef CameraController < handle
             C.Error(err,nargout<3)
         end
         
-        function [out,err] = Capture(C,file,time,mode,lag,block)
+        function [out,err] = Capture(C,file,time,mode,block)
             %Capture photo, now or at set timed, with one or all cameras
             % Capture         -capture photo now
-            % Capture(file)      -filename, if downloaded (no extension)
-            % Capture(file,time)    -start time (datenum) or -delay (sec)
-            % Capture(file,time,mode)   -{'noaf'} 'af' 'all'
-            % Capture(file,time,mode,lag)  -capture lag (sec) {0.05 or 0.4}
-            % Capture(file,time,mode,lag,blck) -wait until finished {true}
-            % [out,err] = Capture(..)          -return error messages
+            % Capture(file)       -filename, if downloaded (no extension)
+            % Capture(file,time)      -start time (datenum) or -delay (sec)
+            % Capture(file,time,mode)      -{'noaf'} 'af' 'all'
+            % Capture(file,time,mode,block)    -wait until finished {true}
+            % [out,err] = Capture(..)          -catch error messages
             %file: filename, if downloaded to pc (no extension)
             %      eg ['[Date yyyy-MM-dd]\' datestr(now,'HH-MM-SS.FFF')]
             %time: if empty - capture immediately
@@ -336,43 +264,32 @@ classdef CameraController < handle
             %mode: 'noaf' - capture without autofocus (default)
             %      'af'   - autofocus and if successful then capture
             %      'all'  - capture with all connected cameras
-            %lag:  start capture this many seconds ahead of specified time
-            %      if time is absolute, default: 0.05 (HTTP) or 0.4 (CMD)
-            %block:if true wait for capture to be completed (default),
-            %      but HTTP may time out and return while capture and
-            %      download is still occurring.
-            if nargin<2 || isempty(file), file = '';   end %custom file name
-            if nargin<3 || isempty(time), time = [];   end %start capture now or at this absolute time
-            if nargin<4 || isempty(mode), mode = 'no'; end %capture mode, 'NoAF' 'AF' 'All'
-            if nargin<5 || isempty(lag),  lag  = [];   end %for timed capture start capture this many seconds ahead of specified time
-            if nargin<6 || isempty(block),block = true;end %wait for capture to be completed before returning
-            if ~isempty(file) && (strcmpi(mode(1:2),'al') || any(file==' ') && isequal(C.connection,'CMD'))
-                %If user wants a custom filename then set it now if:
-                %1) CaptureAll is being used
-                %2) filename has a space & cmd utility is being used (SLOW! CMD commands take around 0.4s to run!)
-                C.Run(['Set session.filenametemplate ' file]) %set the file
+            %block:if true wait for capture to be completed (default)
+            if nargin<2 || isempty(file), file = '';    end %custom file name
+            if nargin<3 || isempty(time), time = [];    end %start capture now or at this absolute time
+            if nargin<4 || isempty(mode), mode = 'noaf';end %capture mode, 'noaf' 'af' 'all'
+            if nargin<5 || isempty(block),block= true;  end %wait for capture to be completed before returning
+            if ~isempty(file) && (strcmpi(mode,'all') || any(file==' ') && isequal(C.connection,'CMD')) 
+                %user wants to set the filename but this is not allowed
+                %(directly) when using CaptureAll or when using CMD if
+                %filename contains a space, so lets set it manualy now.
+                C.Run(['Set session.filenametemplate ' file]) %set filename
                 file = '';
             end
-            if ~isempty(time) %is this a timed capture
-                if isscalar(time) && time<=0 %delay of minus this many seconds
+            if ~isempty(time) %timed capture
+                if isscalar(time) && time<=0 %delay by minus this many seconds
                     pause(abs(time))
-                else %time must be datestr, datevec or datenum
-                    if isempty(lag)
-                        switch C.connection
-                            case 'HTTP', lag = 0.05;
-                            case 'CMD',  lag = 0.40;
-                        end
-                    end
-                    time = datenum(time)-lag/24/60/60; %time = datenum(time)-(fudg+focus*0.03-~wait*0.04)/24/60/60;
-                    while time>now %loop allows clock adjustments during wait
+                else %time is datestr, datevec or datenum
+                    time = datenum(time)-C.lag/24/60/60; %when to capture
+                    while time>now %wait, loop to allow for system clock to be adjusted during long waits
                         pause(min((time-now)*24*60*60,0.5))
                     end
                 end
             end
-            switch lower(mode(1:2))
-                case 'no', [out,err] = C.Run('CaptureNoAf',file,[],block);
-                case 'af', [out,err] = C.Run('Capture'    ,file,[],block);
-                case 'al', [out,err] = C.Cmd('CaptureAll'); %note CaptureAll does not allow extra argument
+            switch lower(mode) %capture
+                case 'noaf', [out,err] = C.Run('CaptureNoAf',file,[],block);
+                case 'af',   [out,err] = C.Run('Capture'    ,file,[],block);
+                case 'all',  [out,err] = C.Cmd('CaptureAll'); %CaptureAll does not support extra argument
             end
             if ~nargout
                 clear out
@@ -384,7 +301,7 @@ classdef CameraController < handle
             I = [];
             if strcmp(C.connection,'HTTP')
                 try
-                    I = imread(['http://' C.dcc ':5513/liveview.jpg'],'jpg');
+                    I = imread(['http://' C.dcc '/liveview.jpg'],'jpg');
                 catch e
                     if strcmp(e.identifier,'MATLAB:imagesci:imread:readURL')
                         err = 'HTTP connection timed out';
@@ -428,11 +345,11 @@ classdef CameraController < handle
             % SN = Cameras        -list of connected cameras serials
             % SN = Cameras(index)  -set current camera using list index
             % SN = Cameras(serial)  -set current camera using serial number
-            % [SN,err] = Cameras(.)  -return error string
+            % [SN,err] = Cameras(..) -catch error messeges
             %Use property.serialnumber to get current camera's serial
             [serials,err] = C.List('cameras'); %all cameras serial numbers
             if isempty(serials) || strcmpi(serials,'OK')
-                err = 'No camera(s) detected';
+                err = 'No camera detected';
                 out = '';
             elseif nargin>1 %select a specific camera
                 if isnumeric(val) %index selection mode
@@ -461,7 +378,7 @@ classdef CameraController < handle
             %List available session or set current session
             % names = Sessions    -list available session names
             % name = Sessions(name)  -set current session
-            % [name,err] = Sessions(.)  -return error string
+            % [name,err] = Sessions(.)  -catch error messeges
             %Note: use session.name to get current session
             [list,err] = C.List('sessions'); %all session names
             if nargin>1
@@ -500,10 +417,10 @@ classdef CameraController < handle
         end
         
         function [status,err] = Focus(C,Num,Mode,Wait)
-            %Adjust camera focus, or auto-focus
-            % Focus([])   -auto focus, lens must be set to AF
-            % Focus(Num)     -number of steps, +ve=far field -ve=near field
-            % Focus(Num,Mode)   -type of step {'small'} 'med' 'large'
+            %Adjust camera focus, or attempt to auto-focus
+            % Focus    -auto focus, lens must be set to AF
+            % Focus(Num)  -number of steps, +ve=far field -ve=near field
+            % Focus(Num,Mode)  -type of step {'small'} 'med' 'large'
             % Focus(Num,Mode,Wait)  -time delay per step (sec)
             %Starts live view, lens can be in MF|AF, camera can be in M|A..
             %Step size can be set in: File>Settings>Live view
@@ -560,7 +477,7 @@ classdef CameraController < handle
                 h4 = text(0.5,-0.05,'Delay:' ,'fontsize',30,'hor','cen','color','w');
                 old = now; %time of previous frame
                 num = 10; %measure time elapsed between n frames to display average time per frame
-                lag = nan(1,num);
+                delay = nan(1,num);
                 idx = 1; %circular counter
                 %addlistener(h4,'String','PreSet',@(~,~)H.UpdateClock(h0,h1,h2,h3,h4,old,num,OLD,idx)); %this isn't working execution
                 while true
@@ -573,10 +490,10 @@ classdef CameraController < handle
                     set(h1,'pos',[p1/10 0.6 0],'str',num2str(p1))
                     set(h2,'pos',[p2/10 0.4 0],'str',num2str(p2))
                     set(h3,'pos',[p3/10 0.2 0],'str',num2str(p3))
-                    lag(idx) = new-old;   %update LAG amounts
+                    delay(idx) = new-old; %update delay amounts
                     idx = mod(idx,num)+1; %update circular counter
-                    old = new;            %update oprevious frame time
-                    set(h4,'str',num2str(nanmean(lag)*24*60*60,'Delay > %.3f sec'))
+                    old = new;            %update previous frame time
+                    set(h4,'str',num2str(nanmean(delay)*24*60*60,'Delay > %.3f sec'))
                     drawnow
                 end
             end
@@ -599,7 +516,7 @@ classdef CameraController < handle
             out = ''; err = ''; %init
             switch C.connection
                 case 'HTTP' %webserver
-                    cmd = ['http://' C.dcc ':5513/?SLC=' cmd]; 
+                    cmd = ['http://' C.dcc '/?SLC=' cmd]; 
                     if ~isempty(prp)
                         cmd = [cmd '&param1=' regexprep(prp,{' ' '=' ';'},{'%20' '%3D' '%3B'})]; %allow spaces and equal signs [www.w3schools.com/tags/ref_urlencode.asp]
                     end
@@ -610,7 +527,7 @@ classdef CameraController < handle
                             cmd = [cmd '&param2=' val];
                         end
                     end
-                    if C.dbg >= 2 %display HTTP command
+                    if C.debug > 1 %display HTTP requests
                         %disp(['>> ' cmd]) %plain text
                         %disp(['>> urlread(' cmd ')']) %matlab command
                         %disp(['<a href="' cmd '">' cmd '</a> ']) %clickable link that opens browser 
@@ -627,45 +544,38 @@ classdef CameraController < handle
                             cmd = [cmd ' ' val];
                         end
                     end
-                    if C.dbg >= 2 %display CMD command
+                    if C.debug > 1 %display CMD requests
                         %disp(['>> ' cmd]) %plain text
                         disp(['>> system(''' cmd ''')']) %matlab command
                         % disp(['<a href="' cmd '">' cmd '</a> ']) %clickable link that opens browser 
                         % disp(['<a href="matlab:system(''"' cmd ''')">' cmd '</a> ']) %clickable link that runs in matlab (broken) 
                     end
             end
-            
-            if strcmp(C.connection,'HTTP')
+            if strcmp(C.connection,'HTTP') %use HTTP webserver 
                 if block %wait while command executes
-                    [out,status] = urlread(cmd); %send httm request and read reply
-                        if C.dbg >= 3
+                    [out,status] = urlread(cmd); %#ok<URLRD> %send httm request and read reply
+                        if C.debug > 2
                             disp(out) %display replies
                         end
                         if ~isempty(out) && out(end)==10 %remove trailing linefeeds
                             out(end) = [];
                         end
-                        if isempty(out)
-                            %should this issue an error???
-                        end
-                        out = strrep(out,'Cannot perform runtime binding on a null reference','No camera detected'); %improve some error msgs
-                        out = strrep(out,'Unknow ','Unknown ');
+                        out = strrep(out,'Cannot perform runtime binding on a null reference','No camera detected'); %translate some error msgs
+                        out = strrep(out,'Unknow ','Unknown '); %spellcheck
                         if ~status || strcmp(out,'Unknown parameter') || strncmpi(out,'Wrong value',11) || strcmp(out,'No camera detected')
                             err = out;
                             out = '';
                         end
                 else %dont wait
-                    [~,~] = system('start /B curl http://localhost:5513/?SLC=CaptureNoAf'); %ignore output
+                    [~,~] = system(['start /B curl http://' C.dcc '/?SLC=CaptureNoAf']); %ignore output
                 end
-            else %CMD
+            else %use CMD utility
                 if block
                     [failed,out] = system(cmd); %run cmd command and read the reply
-                    if C.dbg >= 3
+                    if C.debug > 2
                         disp(['ans =' 10 out]) %display replies
                     end
                     [out,err] = C.CleanCMD(out);
-                    if C.dbg >= 4
-                        disp(['ans =' 10 out]) %display replies
-                    end
                     if failed || strncmpi(out,'error',5)
                         err = out;
                         out = '';
@@ -680,14 +590,16 @@ classdef CameraController < handle
             end
             C.Error(err,nargout<2)
         end
+        
         function [out,err] = Get(C,prop)
             [out,err] = C.Run('Get',prop);
             out = regexprep(out,{'True' 'False'},{'true' 'false'}); %HACK
             C.Error(err,nargout<2)
         end
+        
         function [new,err] = Set(C,prp,val,old,opt)
             % [new,err] = Set(C,prp,val,old,opt)
-            if nargin<4, old = ''; end %current value, to avoid superfluos set commands
+            if nargin<4, old = ''; end %current value, to avoid superfluous set commands
             if nargin<5, opt = {}; end %default valid options
             new = ''; err = ''; %init
             if ~ischar(val)
@@ -705,21 +617,26 @@ classdef CameraController < handle
                 new = val; %do nothing
             else
                 [~,err] = C.Run('Set',prp,val); %send command
-                new = C.Get(prp); %varify value after set (can skip this)
+                new = C.Get(prp); %verify value after set (can skip this)
                 if ~isequal(new,val) && ~isequal(str2num(lower(new)),str2num(lower(val))) %#ok<ST2NM> %verify success, allows: 'True'='true'=true=1
                     err = sprintf('Set command failed: %s',err);
                 end
             end
             C.Error(err,nargout<2)
         end
+        
         function [out,err] = List(C,cmd)
+            %List properties or values as cellstr, one per cell
             [out,err] = C.Run('List',cmd);
-            if ~isempty(out) && isempty(err)
+            if ~isempty(out) && isempty(err) %got a string, no error
                 out = regexprep(out,{'True' 'False'},{'true' 'false'}); %HACK
                 out = regexp(strtrim(out),'\n','split')';
+            else %error
+                out = {}; %return an empty cell, not an empty char
             end
             C.Error(err,nargout<2)
         end
+        
         function [s,err] = Options(C)
             %Returns a list of valid camera options as struct
             params = fieldnames(C.camera); %list of parameters
@@ -734,18 +651,24 @@ classdef CameraController < handle
     %Set methods do not know which sub-field(s) were set, to avoid setting
     %all fields they GET current values and SET only those that changed.
     methods
-        function s = get.camera(C) %Get current camera settings as struct, empty if no camera
-            s = C.List('camera'); %camera settings as cellstr, eg 'camera.fnumber=4.0'
+        function s = get.camera(C)
+            %Get current camera settings as struct, empty struct if no camera
+            s = C.List('camera'); %get camera settings as cellstr, eg {'camera.fnumber=4.0';...}
             if ~isempty(s)
                 s = regexp(s,'camera\.(.*?)=(.*)','tokens','once'); %split fields and values, eg {{'fnumber' '4.0'};...}
-                s = cat(1,s{:})'; %form a cellstr table 2-by-n
+                s = cat(1,s{:})'; %make 2-by-n cellstring {'prop1'...;'val1'...}
                 s(1,:) = regexprep(s(1,:),'[^\w]',''); %remove "." "-" from field names (Nikon), set methods will not work for affected fields
+                [~,i] = unique(s(1,:),'stable'); %bug in digiCamControl causes some fields to be returned twice (eg v2.0.77.0 returns 'lock' twice for Nikon D3400, reported by Marek) should this hack be made to List function instead?
+                s = s(:,i); %remove duplicate fields
                 s = struct(s{:}); %make a struct
                 if isfield(s,'exposurestatus')
-                    s = rmfield(s,'exposurestatus'); %"exposurestatus" is read only and does not appear to change with a Canon
+                    s = rmfield(s,'exposurestatus'); %"exposurestatus" is read only and does not appear to change with a Canon, get rid of it to reduce confusion
                 end
+            else %no camera
+                s = struct; %return empty struct instead of empty cell
             end
         end
+        
         function s = get.session(C)
             s = C.List('session');
             if ~isempty(s)
@@ -755,6 +678,7 @@ classdef CameraController < handle
                 s = struct(s{:});
             end
         end
+        
         function s = get.property(C)
             s = C.List('property');
             if ~isempty(s)
@@ -764,14 +688,14 @@ classdef CameraController < handle
                 s = struct(s{:});
             end
         end
+        
         function c = get.lastfile(C)
             c = C.Get('lastcaptured');
             if any(strcmp(c,{'-' '?'}))
                 c = '';
             end
         end
-        %Due to the way this class is structured attempts to set a property
-        %will first trigger a get method (not needed) and then set method.
+        
         function set.camera(C,new)
             %dcc can list valid option for each camera.parameter, so we
             %can do some common sense checks to guess which value the
@@ -798,12 +722,14 @@ classdef CameraController < handle
                 end
             end
         end
+        
         function set.session(C,new)
             old = C.session;
             for f = fieldnames(new)'
                 C.Set(['session.',f{1}],new.(f{1}),old.(f{1}),'');
             end
         end
+        
         function set.property(C,new)
             old = C.property;
             for f = fieldnames(new)'
@@ -819,32 +745,34 @@ classdef CameraController < handle
             % [status,err] = TestHTTP(ip)
             status = 0; err = ''; %init
             try
-                t = java.net.URL([],['http://' ip ':5513'],sun.net.www.protocol.http.Handler).openConnection; %does this work on linux?
+                t = java.net.URL([],['http://' ip],sun.net.www.protocol.http.Handler).openConnection; %does this work on linux?
                 %t.setConnectTimeout(0.5); t.setReadTimeout(0.5); %timeout not working, defaults to ~2.5 seconds
                 t.getInputStream;
                 status = 1; %success
             catch e
-                if     strfind(e.message,'connect timed out'), err = 'HTTP connection timed out';
-                elseif strfind(e.message,'Connection refused'),err = 'HTTP connection refused';
-                elseif strfind(e.message,'UnknownHost'),       err = 'HTTP unknown address';
-                elseif strfind(e.message,'Permission denied'), err = 'HTTP permission denied';
-                else,                                          err = ['HTTP ' e.message];
+                if     strfind(e.message,'connect timed out'), err = 'webserver connection timed out';
+                elseif strfind(e.message,'Connection refused'),err = 'webserver connection refused';
+                elseif strfind(e.message,'UnknownHost'),       err = 'webserver address unknown';
+                elseif strfind(e.message,'Permission denied'), err = 'webserver permission denied';
+                else,                                          err = ['webserver ' e.message];
                 end
             end
         end
+        
         function [fold,err] = FindDCC
             %Check default install location for digiCamControl app
             % [fold,err] = FindDCC
             err = ''; %init
-            if     isdir(fullfile(char(java.lang.System.getenv('ProgramFiles(x86)')),'digiCamControl')) %#ok<ISDIR>
-                fold   = fullfile(char(java.lang.System.getenv('ProgramFiles(x86)')),'digiCamControl');
-            elseif isdir(fullfile(char(java.lang.System.getenv('ProgramFiles'     )),'digiCamControl')) %#ok<ISDIR>
-                fold   = fullfile(char(java.lang.System.getenv('ProgramFiles'     )),'digiCamControl');
-            else
-                fold = '';
-                err = 'digiCamControl folder not found';
+            fold = fullfile(char(java.lang.System.getenv('ProgramFiles(x86)')),'digiCamControl');
+            if exist(fold,'file')~=7 %~isdir(fold)
+                fold = fullfile(char(java.lang.System.getenv('ProgramFiles')),'digiCamControl');
+                if exist(fold,'file')~=7 %~isdir(fold)
+                    fold = '';
+                    err = 'digiCamControl folder not found';
+                end
             end
         end
+        
         function [status,err] = TestCMD(dccfolder)
             %Test CMD utility communication
             % [status,err] = TestCMD(dccfolder)
@@ -866,6 +794,7 @@ classdef CameraController < handle
                 end
             end
         end
+        
         function [str,err] = CleanCMD(str)
             %clean up cmd responce (faster then using /clean argument)
             str = regexp(str,'(?<=:;response:).*?(?=[;]*\n)','match','once');
@@ -880,6 +809,7 @@ classdef CameraController < handle
                 str = regexprep(str,{'\\\\' '"'},{'\\' ''}); %remove any escape character and quotes
             end
         end
+        
         function [I,mch] = Match(str,opt)
             %Flexible comparison of cellstr to string, return best match
             % [I,mch] = Match(str,opt)
@@ -891,9 +821,6 @@ classdef CameraController < handle
                 end
                 if ~any(I) %try numeric comparison
                     I = strncmpi(opt,str,numel(str));
-                    if ~any(I) %try fragment of string comparison
-                        I = contains(lower(opt),lower(str)); 
-                    end
                 end
             end
             if sum(I)==1
@@ -903,6 +830,7 @@ classdef CameraController < handle
             end
         end
     end
+    
     methods (Access = private)
         function Error(C,err,display)
             if ~isempty(err) && (nargin<3 || display)
