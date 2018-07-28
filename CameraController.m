@@ -1,19 +1,17 @@
-%CameraController v1.3.2 for tethered DSLR cameras using <a href=http://digicamcontrol.com/>digiCamControl</a>. 
-%Use this class to control supported cameras - set settings such as ISO,
-%exposure, focus, aperture(fnumber), white balance, compression, stream
-%liveview, capture photos & video, configure file download, etc.
+%Controller for tethered DSLR cameras (v1.3.2)
+%This class uses <a href=http://digicamcontrol.com/>digiCamControl</a> (windwos app) to control supported
+%cameras (set ISO, exposure, focus, aperture(fnumber), white balance,
+%stream liveview, capture photos & video, configure file download, etc.)
 % C = CameraController   -create class and detect digiCamControl app
 % C = CameraController(app)  -set custom location of digiCamControl app
 % C = CameraController(app,debug)  -set debug level [0-3] (default:1)
-%app: address and port number of HTTP webserver (default: 'localhost:5513')
-% OR folder containing digiCamControll's CMD remote utility (default:
-% %ProgramFiles(x86)%\digiCamControl or %ProgramFiles%\digiCamControl where
-% %*% are system environment variables). If left empty the class will
-% first try the default HTTP webserver then default CMD utility folders.
+%app: address of HTTP webserver (default: 'localhost:5513') OR
+% CMD remote utility folder (eg 'C:\Program Files (x86)\digiCamControl').
+% If empty tries default HTTP webserver then default CMD utility folders.
 %debug: 0=silent, 1=minimal (default), 2=print requests, 3=print replies
 %
 %Setup:
-%1.Install and run digiCamControl, BETA v2.0.69 or greater:
+%1.Install and run digiCamControl v2.1.0 or greater:
 %  https://sourceforge.net/projects/digicamcontrol/files/latest/download
 %2.Enable webserver: File>Settings>Webserver>Enable>RESTART APP.
 %3.Connect one or more cameras using USB cable (or WiFi if supported?).
@@ -82,10 +80,9 @@
 %-"folder" does not support [tags], instead use "\" in "filenametemplate".
 % 
 %Example:
-% C = CameraController; %initialise class, check cameras
-% C.session.folder = 'C:\DSLR'; %set download folder
-% C.session.filenametemplate = '[Camera Name]\[Date yyyy-MM-dd-hh-mm-ss]'; %set file name
-% C.session.lowercaseextension = 1; %use ".jpg" instead of ".JPG"
+% C = CameraController; %initialise class
+% C.session.folder = 'C:\DSLR'; %set download folder and file
+% C.session.filenametemplate = '[Camera Name]\[Date yyyy-MM-dd-hh-mm-ss]';
 % C.camera.drive_mode = 'Single-Frame Shooting'; %camera settings
 % C.camera.compressionsetting = 'Large Fine JPEG';
 % C.camera.isonumber = 3200;
