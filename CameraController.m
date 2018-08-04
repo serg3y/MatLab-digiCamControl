@@ -1,28 +1,30 @@
-%Controller for tethered DSLR cameras (v1.3.2)
-%This class uses <a href=http://digicamcontrol.com/>digiCamControl</a> (windwos app) to control supported
-%cameras (set ISO, exposure, focus, aperture(fnumber), white balance,
-%stream liveview, capture photos & video, configure file download, etc.)
-% C = CameraController   -create class and detect digiCamControl app
-% C = CameraController(app)  -set custom location of digiCamControl app
-% C = CameraController(app,debug)  -set debug level [0-3] (default:1)
-%app: address of HTTP webserver (default: 'localhost:5513') OR
-% CMD remote utility folder (eg 'C:\Program Files (x86)\digiCamControl').
-% If empty tries default HTTP webserver then default CMD utility folders.
+%Controller (v1.3.2) for tethered DSLR cameras using <a href=http://digicamcontrol.com/>digiCamControl</a> app.
+% C = CameraController   -create class
+% C = CameraController(dcc)  -digiCamControl location
+% C = CameraController(dcc,debug)  -set debug level
+%dcc: digiCamControl's webserver IP or CMD remote utility folder.
+% If empty this class tests the default webserver, 'localhost:5513', then
+% default app install locations, 'C:\Program Files (x86)\digiCamControl'.
 %debug: 0=silent, 1=minimal (default), 2=print requests, 3=print replies
-%
+% 
+%Description:
+%-This class uses digiCamControl (windows only app) to control supported
+% cameras: set ISO, exposure, focus, aperture(fnumber), white balance,
+% stream liveview, capture photos & video, configure file download, etc.
+%-digiCamControl is a multi purpose, free, open source, Windows only
+% application that can control a host of <a href=http://digicamcontrol.com/cameras>supported cameras</a>. 
+% 
 %Setup:
-%1.Install and run digiCamControl v2.1.0 or greater:
+%1.Install and start digiCamControl v2.1.0 or greater:
 %  https://sourceforge.net/projects/digicamcontrol/files/latest/download
-%2.Enable webserver: File>Settings>Webserver>Enable>RESTART APP.
+%2.Enable webserver: File>Settings>Webserver>Enable> RESTART APP
 %3.Connect one or more cameras using USB cable (or WiFi if supported?).
 %4.For full programmatic control set camera to (M) and lens to (MF).
 %5.Use digiCamControl app to ensure camera is working.
 % 
 %Remarks:
-%-digiCamControl is a multi purpose, free, open source, Windows only
-% application that can control a host of <a href=http://digicamcontrol.com/cameras>supported cameras</a>. 
 %-This class communicates with camera(s) via digiCamControl's included 
-% <a href=http://digicamcontrol.com/doc/userguide/web>HTTP webserver</a>(recommended) or <a href=http://digicamcontrol.com/doc/userguide/remoteutil>CMD Utility</a>. 
+% <a href=http://digicamcontrol.com/doc/userguide/web>webserver</a>(recommended) or <a href=http://digicamcontrol.com/doc/userguide/remoteutil>CMD Utility</a>. 
 %-The webserver is much faster and allows camera(s) to be controlled from
 % any Windows/Linux computer on the network or via the <a href=http://digicamcontrol.com/doc/userguide/settings#webserver>internet</a>. 
 %-Visit http://digiCamControl.com for <a href=http://digicamcontrol.com/doc>documentation</a>, <a href=http://digicamcontrol.com/phpbb/>forums</a> and to <a href=http://digicamcontrol.com/donate>donate</a>.
@@ -31,8 +33,6 @@
 % options. Reinitialise this class when swapping cameras.
 % 
 %Limitations:
-%-This class cannot download old photos, user has to use digiCamControl app
-% manually: <a href=http://digicamcontrol.com/doc/userguide/interface/downph>digiCamControl>Download photos</a>. 
 %-This class can only stream liveview (low-rez, noisy, ~15Hz) from 
 % <a href=http://digicamcontrol.com/cameras>supported cameras</a>. However digiCamControl does support "Open Broadcaster
 % Software" (OBS) and "XSplit", see <a href=http://digicamcontrol.com/doc/usecases/live>Streaming</a> and <a href=http://digicamcontrol.com/phpbb/search.php?keywords=%5BOBS+%7C+XSplit+%7C+streaming%5D&terms=any&author=&sc=1&sf=all&sr=posts&sk=t&sd=d&st=0&ch=300&t=0&submit=Search>Search Forums</a> for info.
@@ -42,7 +42,7 @@
 %-digiCamControl issues: http://digicamcontrol.com/phpbb/viewforum.php?f=4
 %-Focus method does not know how long it needs to wait after a focus change
 % is requested, see Focus method help to set custom delays.
-%-LiveView can only be 'streamed' when using HTTP webserver.
+%-LiveView can only be 'streamed' when using the webserver.
 % 
 %Camera Settings:
 %-Some settings will not have affect if camera is not in Manual mode (M).
@@ -78,21 +78,22 @@
 % to all connected cameras. To distinguish cameras use [Camera Name] or
 % [Camera Counter 4 digit] tags in the template.
 %-"folder" does not support [tags], instead use "\" in "filenametemplate".
+%-Manual download of files from the camera can only be done via the app.
 % 
 %Example:
-% C = CameraController; %initialise class
-% C.session.folder = 'C:\DSLR'; %set download folder and file
+% C = CameraController; %initialise
+% C.session.folder = 'C:\DSLR'; %download settings
 % C.session.filenametemplate = '[Camera Name]\[Date yyyy-MM-dd-hh-mm-ss]';
-% C.camera.drive_mode = 'Single-Frame Shooting'; %camera settings
-% C.camera.compressionsetting = 'Large Fine JPEG';
-% C.camera.isonumber = 3200;
+% C.camera.isonumber = 3200; %camera settings
 % C.camera.fnumber = 5.6;
 % C.camera.shutterspeed = 1/200;
-% C.Capture %capture now
-% C.lastfile %get last filename (does not include folder)
+% C.Capture %capture
+% C.lastfile %last filename
 % 
-%Serge 2017
-% Questions/bugs/fixes: <a href="http://mailto:s3rg3y@hotmail.com">s3rg3y@hotmail.com</a>
+%Serge 2018
+% GitHub: https://github.com/serg3y/MatLab-digiCamControl
+% Bugs/fixes: s3rg3y@hotmail.com (include software versions, camera model)
+% Note: I am not a developer of the digiCamControl app.
  
 %TODO:
 %-Allow camera to be changed on the fly, but how to detect camera change
@@ -106,16 +107,11 @@
 %-Still needs a lot more testing, especially on Linux.
  
 %Change Log:
-%v1.3.2 (2018-07-21)
-%-get.camera now returns empty struct instead of empty char on error
-%-detailed examples moved to separate file
-%-bug fix in property assignment, eg fnumber=4 could set it to 14.0
-%-capture "lag" is now a class property rather then input to Capture
-%-fixed get.camera to deal with duplicated fields (reported by Marek)
+%v1.3.2 (2018-08-05)
+%-webserver IP can include a port number (default: 'localhost:5513')
+%-capture "lag" now a property rather then input to Capture method
+%-fixed error with duplicate fields on Nikon
 %-debug property no longer hidden
-%-minor changes
-%-fixed bug that prevented running digicamcontroll on another computer
-%-ip can now include a port number, eg 'localhost:5513' (default port:5513)
 %v1.3.1.2 (2018-07-03)
 %-mostly comments
 %v1.3.1 (2018-02-24)
@@ -144,9 +140,9 @@ classdef CameraController < handle
         lasterr    %last error message
     end
     properties
-        dcc %ip/hostname of PC running digiCamControl webserver OR folder on this computer with digiCamControl CMD utility
+        dcc %ip of PC running digiCamControl webserver OR folder on this computer with digiCamControl CMD utility
         debug %debug level: 0-silent, 1-basic info (default), 2-print requests, 3-print replies 
-        lag %timed capture will start this many seconds ahead of specified time to adjust for interface and camera delays (default: 0.05 for HTTP and 0.4 for CMD)
+        lag %timed capture will start this many seconds ahead of specified time to adjust for interface and camera delays (default: 0.05 for webserver and 0.4 for CMD)
     end
     
     %% Constructor
@@ -186,7 +182,7 @@ classdef CameraController < handle
             % C.CheckConnection(fold)   -use custom cmd utility folder
             % [status,err] = C.CheckConnection
             C.connection = ''; err = ''; %init
-            if nargin<2 || isempty(dcc) %auto: try default HTTP, then default CMD location
+            if nargin<2 || isempty(dcc) %auto: try default webserver IP, then default CMD location
                 C.dcc = 'localhost:5513'; %default HTTP
                 [status,err1] = C.TestHTTP(C.dcc);
                 if status
@@ -501,7 +497,7 @@ classdef CameraController < handle
     %% Hidden methods
     methods (Hidden = true)
         function [out,err] = Run(C,cmd,prp,val,block)
-            %Send HTTP or CMD command to digiCamControll
+            %Send command to digiCamControll
             % Run(cmd)       -command (string)
             % Run(cmd,prp)       -argument or property {''} (string)
             % Run(cmd,prp,val)       -property value {''}
@@ -548,7 +544,7 @@ classdef CameraController < handle
                         % disp(['<a href="matlab:system(''"' cmd ''')">' cmd '</a> ']) %clickable link that runs in matlab (broken) 
                     end
             end
-            if strcmp(C.connection,'HTTP') %use HTTP webserver 
+            if strcmp(C.connection,'HTTP') %use webserver 
                 if block %wait while command executes
                     [out,status] = urlread(cmd); %#ok<URLRD> %send httm request and read reply
                         if C.debug > 2
@@ -738,7 +734,7 @@ classdef CameraController < handle
     %% Helper functions
     methods (Static = true, Hidden = true)
         function [status,err] = TestHTTP(ip)
-            %Test HTTP webserver communication
+            %Test webserver communication
             % [status,err] = TestHTTP(ip)
             status = 0; err = ''; %init
             try

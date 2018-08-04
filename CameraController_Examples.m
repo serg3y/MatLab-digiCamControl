@@ -1,4 +1,4 @@
-%% Example: download settings
+                                                                %% Example: download settings
 % best to set "Transfer" mode in bottom left of GUI to Camera and Computer
 C = CameraController;
 C.session.folder = 'C:\DSLR';
