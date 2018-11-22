@@ -1,4 +1,4 @@
-%Controller (v1.3.2) for tethered DSLR cameras using <a href=http://digicamcontrol.com/>digiCamControl</a> app.
+%Controller (v1.3.3) for tethered DSLR cameras using <a href=http://digicamcontrol.com/>digiCamControl</a> app.
 % C = CameraController   -create class
 % C = CameraController(dcc)  -digiCamControl location
 % C = CameraController(dcc,debug)  -set debug level
@@ -107,6 +107,8 @@
 %-Still needs a lot more testing, especially on Linux.
  
 %Change Log:
+%v1.3.3 (2018-11-23)
+%-fixed multiple camera support and improved the multiple camera example
 %v1.3.2 (2018-08-05)
 %-webserver IP can include a port number (default: 'localhost:5513')
 %-capture "lag" now a property rather then input to Capture method
@@ -341,7 +343,7 @@ classdef CameraController < handle
             % [SN,err] = Cameras(..) -catch error messeges
             %Use property.serialnumber to get current camera's serial
             [serials,err] = C.List('cameras'); %all cameras serial numbers
-            if isempty(serials) || strcmpi(serials,'OK')
+            if isempty(serials) || isequal(serials,'OK')
                 err = 'No camera detected';
                 out = '';
             elseif nargin>1 %select a specific camera

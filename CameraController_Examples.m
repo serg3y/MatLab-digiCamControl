@@ -1,4 +1,4 @@
-                                                                %% Example: download settings
+%% Example: download settings
 % best to set "Transfer" mode in bottom left of GUI to Camera and Computer
 C = CameraController;
 C.session.folder = 'C:\DSLR';
@@ -7,7 +7,7 @@ C.session.useoriginalfilename = 0; %ignores "filenametemplate"
 C.session.downloadthumbonly = 0; %not working (v2.0.72.9)
 C.session.downloadonlyjpg = 0; %only used if "PC+CAM"
 C.session.deletefileaftertransfer = 1; %only has affect if Transfer="Cam+PC" and affectively converts it to "PC only"
-C.session.asksavepath = 0; %dialog popup for after capture
+C.session.asksavepath = 0; %dialogue pop-up for after capture
 C.session.allowoverwrite = 0; %overwrite if file exists
 C.session.lowercaseextension = 1; %use "*.jpg" instead of "*.JPG"
  
@@ -33,12 +33,18 @@ file = [datestr(time,'yyyy-mm-dd_HHMMSS.FFF') '_' C.property.devicename]; %times
 C.Capture(file,time); %capture
 datestr(time)
 
-%% Example: two cameras
+%% Example: multiple cameras
 C = CameraController;
-C.Cameras(1), C.property.devicename = 'Cam1'; %camera name
-C.Cameras(2), C.property.devicename = 'Cam2';
+serials = C.Cameras; %list of connected camera serial numbers
+for k = 1:numel(C.Cameras) %step through cameras
+    C.Cameras(serials{k}); %switch to camera
+    C.property.devicename = num2str(k,'C%g'); %set camera name: C#
+    fprintf('ID:%-2g Serial:%-15s Name:"%s"\n',k,serials{k},C.property.devicename) %display
+end
 C.session.filenametemplate = '[Camera Name]\[Time hh-mm-ss]'; %filename 
-C.Cmd('CaptureAll')
+C.Cmd('CaptureAll')    %capture using all cameras
+C.Capture([],-2,'all') %capture using all cameras after a 2 sec delay
+%file = C.lastfile %returns file name only and for one camera only
 
 %% Example: focus stacking
 C = CameraController;
@@ -65,9 +71,8 @@ end
 C.Cmd('LiveViewWnd_Hide'); %stop live view
 
 %% Example: debugging
-C = CameraController;
-C.Clock %show clock (take timed photo of clock to measure capture delay)
-C.debug = 2; %display commands and replies
+C = CameraController([],3); %start with debug on
+C.Clock %show clock (usefull for taking timed photos of computer clock to measure capture delay)
 
 %% Example webserver commands:
 % http://localhost:5513                                                     %primitive http GUI 
