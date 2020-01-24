@@ -61,6 +61,7 @@ C.Cmd('LiveViewWnd_Hide')            %turn off live preview to save battery
 %% Example: stream live view
 % To remove rectangle: Live View>Display>Show focus rectangle
 % To reduce lag enable: Live View>Display>No processing
+% Can shoot RAW or JPEG, but not both
 C = CameraController;
 C.Cmd('LiveViewWnd_Show'); %start live view
 C.Cmd('All_Minimize'); %minimise digiCamControl
@@ -72,6 +73,14 @@ while ishandle(h) %loop until closed
     drawnow %update display
 end
 C.Cmd('LiveViewWnd_Hide'); %stop live view
+
+%% Example: open mirror before exposure (using live view)
+% Can shoot RAW or JPEG, but not both
+C = CameraController;
+C.Cmd('LiveViewWnd_Show'); %live view on (open mirror)
+pause(0.5) %wait for any vibration to stop
+C.Capture %capture
+C.Cmd('LiveViewWnd_Hide'); %live view off (close mirror)
 
 %% Example: debugging
 C = CameraController([],3); %start with debug on

@@ -751,7 +751,7 @@ classdef CameraController < handle
                 status = 1; %success
             catch e
                 if     strfind(e.message,'connect timed out'), err = 'webserver connection timed out';
-                elseif strfind(e.message,'Connection refused'),err = 'webserver connection refused';
+                elseif strfind(e.message,'Connection refused'),err = 'webserver connection refused (turn on digiCamControl webserver & restart digiCamControl)';
                 elseif strfind(e.message,'UnknownHost'),       err = 'webserver address unknown';
                 elseif strfind(e.message,'Permission denied'), err = 'webserver permission denied';
                 else,                                          err = ['webserver ' e.message];
@@ -768,7 +768,7 @@ classdef CameraController < handle
                 fold = fullfile(char(java.lang.System.getenv('ProgramFiles')),'digiCamControl');
                 if exist(fold,'file')~=7 %~isdir(fold)
                     fold = '';
-                    err = 'digiCamControl folder not found';
+                    err = 'digiCamControl install folder not found';
                 end
             end
         end
