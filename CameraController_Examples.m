@@ -26,12 +26,15 @@ C.Capture('MyPhoto') %capture (set custom filename)
 C.Capture('[Time hh-mm-ss]') %capture (use time tag as filename)
 file = C.lastfile %get last downloaded filenames
 
-%% Example: timed capture
+%% Example: timed capture, with timelapse option
 C = CameraController;
-time = ceil(now*24*60*6)/24/60/6; %upcoming whole 10 seconds
-file = [datestr(time,'yyyy-mm-dd_HHMMSS.FFF') '_' C.property.devicename]; %timestamp & camera name
-C.Capture(file,time); %capture
-datestr(time)
+C.lag = 0.25; %adjust camera lag (sec)
+duation = 4; %capture every n seconds
+for k = 1:20000 %timelapse (optional)
+    time = ceil(now*86400/duation)*duation/86400; %upcoming whole 10 seconds
+    file = datestr(time,'yyyymmdd_HHMMSS.FFF'); %timestamp
+    C.Capture(file,time); %capture
+end
 
 %% Example: multiple cameras
 C = CameraController;

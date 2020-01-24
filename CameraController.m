@@ -1,4 +1,4 @@
-%Controller (v1.3.3) for tethered DSLR cameras using <a href=http://digicamcontrol.com/>digiCamControl</a> app.
+%Controller (v1.3.5) for tethered DSLR cameras using <a href=http://digicamcontrol.com/>digiCamControl</a> app.
 % C = CameraController   -create class
 % C = CameraController(dcc)  -digiCamControl location
 % C = CameraController(dcc,debug)  -set debug level
@@ -15,11 +15,12 @@
 % application that can control a host of <a href=http://digicamcontrol.com/cameras>supported cameras</a>. 
 % 
 %Setup:
-%1.Install and start digiCamControl v2.1.0 or greater:
+%1.Install latest version of digiCamControl from:
 %  https://sourceforge.net/projects/digicamcontrol/files/latest/download
-%2.Enable webserver: File>Settings>Webserver>Enable> RESTART APP
+%2.Enable webserver: File > Settings > Webserver > Enable "Use web server,
+%  & "Allow interaction via webserver", use port "5513" > *!RESTART APP!*
 %3.Connect one or more cameras using USB cable (or WiFi if supported?).
-%4.For full programmatic control set camera to (M) and lens to (MF).
+%4.For full control of a Canon DSLR set body and lens to manual.
 %5.Use digiCamControl app to ensure camera is working.
 % 
 %Remarks:
@@ -107,6 +108,10 @@
 %-Still needs a lot more testing, especially on Linux.
  
 %Change Log:
+%v1.3.5 (2018-12-12)
+%-Support for older versions of MatLab, eg 2015b
+%v1.3.4 (2018-11-30)
+%-fixed error msg when no camera is connected
 %v1.3.3 (2018-11-23)
 %-fixed multiple camera support and improved the multiple camera example
 %v1.3.2 (2018-08-05)
@@ -343,7 +348,7 @@ classdef CameraController < handle
             % [SN,err] = Cameras(..) -catch error messeges
             %Use property.serialnumber to get current camera's serial
             [serials,err] = C.List('cameras'); %all cameras serial numbers
-            if isempty(serials) || isequal(serials,'OK')
+            if isempty(serials) || isequal(serials,{'OK'})
                 err = 'No camera detected';
                 out = '';
             elseif nargin>1 %select a specific camera
@@ -653,7 +658,7 @@ classdef CameraController < handle
                 s = regexp(s,'camera\.(.*?)=(.*)','tokens','once'); %split fields and values, eg {{'fnumber' '4.0'};...}
                 s = cat(1,s{:})'; %make 2-by-n cellstring {'prop1'...;'val1'...}
                 s(1,:) = regexprep(s(1,:),'[^\w]',''); %remove "." "-" from field names (Nikon), set methods will not work for affected fields
-                [~,i] = unique(s(1,:),'stable'); %bug in digiCamControl causes some fields to be returned twice (eg v2.0.77.0 returns 'lock' twice for Nikon D3400, reported by Marek) should this hack be made to List function instead?
+                [~,i] = unique(s(1,:)); i = sort(i); %remove duplicate fields, old matlab support
                 s = s(:,i); %remove duplicate fields
                 s = struct(s{:}); %make a struct
                 if isfield(s,'exposurestatus')
@@ -669,7 +674,7 @@ classdef CameraController < handle
             if ~isempty(s)
                 s = regexp(s,'session\.(.*?)=(.*)','tokens','once');
                 s = cat(1,s{:})';
-                s(2,:) = regexprep(s(2,:),{'^False$' '^True$'},{'false' 'true'}); %change case for consistancy
+                s(2,:) = regexprep(s(2,:),{'^False$' '^True$'},{'false' 'true'}); %change case for consistency
                 s = struct(s{:});
             end
         end
@@ -773,7 +778,7 @@ classdef CameraController < handle
             % [status,err] = TestCMD(dccfolder)
             status = 0; err = ''; %init
             [~,t] = system('tasklist /FI "imagename eq CameraControl.exe"'); %can skip this test, but will take a long time to fail if app is not running
-            if ~contains(t,'CameraControl.exe')
+            if isempty(strfind(t,'CameraControl.exe')) %#ok<STREMP> compatible with old MatLab
                 err = 'digiCamControl is not running';
             else
                 exe = fullfile(dccfolder,'CameraControlRemoteCmd.exe');
